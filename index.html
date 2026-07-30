@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daily Tracker - Quản lý công việc hàng ngày</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-database-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0ebe3;
+  --surface:#fff;
+  --surface2:#f8f5f0;
+  --text:#1f1d1a;
+  --text2:#6b6358;
+  --border:#e0d8c6;
+  --primary:#b25a3a;
+  --primary-light:#e89a7a;
+  --primary-dark:#8a3e22;
+  --success:#2e7d32;
+  --danger:#b71c1c;
+  --warning:#f57f17;
+  --shadow:0 2px 8px rgba(0,0,0,.06);
+  --radius:12px;
+  --radius-sm:8px;
+  font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh}
+.app{max-width:960px;margin:0 auto;padding:20px 16px 100px}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.header h1{font-size:22px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.header h1 span{font-size:26px}
+.header-right{display:flex;align-items:center;gap:10px}
+
+.date-nav{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.date-nav button{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 12px;cursor:pointer;font-size:13px;color:var(--text)}
+.date-nav .date-display{font-weight:600;font-size:15px;min-width:160px;text-align:center}
+
+/* Stats bar */
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:16px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center}
+.stat-card .num{font-size:24px;font-weight:700;color:var(--primary)}
+.stat-card .num.green{color:var(--success)}
+.stat-card .num.red{color:var(--danger)}
+.stat-card .label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+
+/* Progress bar */
+.progress-wrap{background:var(--border);border-radius:999px;height:8px;overflow:hidden;margin-bottom:16px}
+.progress-bar{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--success),#66bb6a);transition:width .4s ease}
+
+/* Add task */
+.add-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.add-section .row{display:flex;flex-wrap:wrap;gap:8px}
+.add-section .row>*{flex:1;min-width:120px}
+.add-section input,.add-section select{padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font:inherit;font-size:14px;color:var(--text);width:100%}
+.add-section .add-btn-row{display:flex;gap:8px;margin-top:8px}
+.add-section .add-btn-row button{flex:1}
+
+button{cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:10px 16px;border-radius:var(--radius-sm);font:inherit;font-size:13px;font-weight:500;transition:all .15s}
+button:hover{opacity:.85}
+button.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+button.primary:hover{background:var(--primary-dark)}
+button.small{padding:6px 10px;font-size:12px}
+button.danger{color:var(--danger);border-color:var(--danger)}
+button.danger:hover{background:var(--danger);color:#fff}
+
+/* Task list */
+.task-list{display:grid;gap:6px;margin-bottom:16px}
+.category-header{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;padding:12px 4px 4px;display:flex;align-items:center;gap:6px}
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s}
+.task-card:hover{box-shadow:var(--shadow)}
+.task-card .check-wrap{flex-shrink:0;width:24px;height:24px;border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
+.task-card .check-wrap.done{background:var(--success);border-color:var(--success)}
+.task-card .check-wrap.done::after{content:"✓";color:#fff;font-size:14px;font-weight:700}
+.task-card .task-body{flex:1;min-width:0}
+.task-card .task-title{font-size:14px;font-weight:500}
+.task-card .task-title.done{text-decoration:line-through;color:var(--text2)}
+.task-card .task-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.task-card .cat-badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500}
+.task-card .priority-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.task-card .task-actions{display:flex;gap:4px;flex-shrink:0}
+.task-card .time{font-size:11px;color:var(--text2)}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px}
+.tabs button{flex:1;border:none;background:transparent;padding:10px;border-radius:var(--radius-sm);font-weight:500;font-size:13px}
+.tabs button.active{background:var(--primary);color:#fff}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* History & Stats */
+.stats-grid{display:grid;gap:16px}
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.chart-wrap h3{font-size:14px;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+.chart-wrap canvas{max-height:250px}
+.period-select{display:flex;gap:4px;margin-bottom:12px}
+.period-select button{flex:1;padding:6px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent}
+.period-select button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+.history-list .day-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
+.history-list .day-group .day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.history-list .day-group .day-head .date{font-weight:600;font-size:14px}
+.history-list .day-group .day-head .rate{font-size:13px;color:var(--text2)}
+.history-list .day-group .h-task{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px}
+.history-list .day-group .h-task .h-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+
+/* User bar */
+.user-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.user-bar .label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+.user-bar input{flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font:inherit;font-size:13px}
+.user-bar button{padding:8px 14px}
+.online-status{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text2)}
+.online-status .dot{width:8px;height:8px;border-radius:50%}
+.online-status .dot.green{background:var(--success)}
+.online-status .dot.red{background:var(--danger)}
+
+.empty-state{text-align:center;padding:40px 16px;color:var(--text2)}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+.empty-state p{font-size:14px}
+
+@media(max-width:640px){
+  .header h1{font-size:18px}
+  .add-section .row>*{min-width:100%}
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+}
+
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+.pop{animation:pop .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.task-card{animation:fadeIn .2s ease}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+  <h1><span>📋</span> Daily Tracker</h1>
+  <div class="header-right">
+    <span class="online-status"><span class="dot" id="fb-dot"></span><span id="fb-text">Đang kết nối…</span></span>
+  </div>
+</div>
+
+<div class="user-bar">
+  <span class="label">Người dùng</span>
+  <input type="text" id="me" placeholder="Gõ tên rồi Enter…" list="known-users">
+  <datalist id="known-users"></datalist>
+  <button id="save-me" class="primary">Lưu tên</button>
+  <span id="who" style="font-size:13px;color:var(--text2)">Chưa đặt tên</span>
+</div>
+
+<div class="date-nav">
+  <button id="prev-day">‹</button>
+  <span class="date-display" id="date-display"></span>
+  <button id="next-day">›</button>
+  <button id="today-btn">Hôm nay</button>
+</div>
+
+<div class="stats-bar" id="stats-bar">
+  <div class="stat-card"><div class="num" id="stat-total">0</div><div class="label">Tổng</div></div>
+  <div class="stat-card"><div class="num green" id="stat-done">0</div><div class="label">Đã làm</div></div>
+  <div class="stat-card"><div class="num red" id="stat-pending">0</div><div class="label">Còn lại</div></div>
+  <div class="stat-card"><div class="num" id="stat-rate">0%</div><div class="label">Tỉ lệ</div></div>
+  <div class="stat-card"><div class="num" id="stat-streak">0</div><div class="label">Streak</div></div>
+</div>
+
+<div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+
+<div class="add-section">
+  <div class="row">
+    <input type="text" id="task-input" placeholder="Thêm công việc…">
+    <select id="cat-select"><option value="work">💼 Công việc</option><option value="study">📚 Học tập</option><option value="health">🏃 Sức khỏe</option><option value="personal">🧘 Cá nhân</option><option value="finance">💰 Tài chính</option><option value="other">📌 Khác</option></select>
+    <select id="priority-select"><option value="high">🔴 Cao</option><option value="medium" selected>🟡 Trung bình</option><option value="low">🟢 Thấp</option></select>
+  </div>
+  <div class="add-btn-row">
+    <button id="add-task" class="primary">+ Thêm</button>
+    <button id="add-bulk">📝 Thêm nhiều</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="active" data-tab="today">Hôm nay</button>
+  <button data-tab="history">Lịch sử</button>
+  <button data-tab="stats">Thống kê</button>
+</div>
+
+<div class="tab-content active" id="tab-today">
+  <div id="task-list" class="task-list"></div>
+  <div style="display:flex;gap:4px;margin-top:8px">
+    <button id="clear-done" class="small danger">Xoá mục đã hoàn thành</button>
+    <button id="export-today" class="small">Xuất TXT</button>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-history">
+  <div class="history-list" id="history-list"></div>
+</div>
+
+<div class="tab-content" id="tab-stats">
+  <div class="period-select">
+    <button data-period="week" class="active">Tuần</button>
+    <button data-period="month">Tháng</button>
+    <button data-period="year">Năm</button>
+    <button data-period="all">Tất cả</button>
+  </div>
+  <div class="stats-grid">
+    <div class="chart-wrap"><h3>📊 Tỉ lệ hoàn thành</h3><canvas id="rate-chart"></canvas></div>
+    <div class="chart-wrap"><h3>📈 Số task theo ngày</h3><canvas id="daily-chart"></canvas></div>
+    <div class="chart-wrap"><h3>🎯 Theo danh mục</h3><canvas id="cat-chart"></canvas></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+(function(){
+  const CATEGORIES = [
+    {id:"work",label:"💼 Công việc",color:"#e53935"},
+    {id:"study",label:"📚 Học tập",color:"#1e88e5"},
+    {id:"health",label:"🏃 Sức khỏe",color:"#43a047"},
+    {id:"personal",label:"🧘 Cá nhân",color:"#fb8c00"},
+    {id:"finance",label:"💰 Tài chính",color:"#8e24aa"},
+    {id:"other",label:"📌 Khác",color:"#757575"}
+  ];
+  const PRIORITIES = {high:{label:"🔴 Cao",color:"#e53935"},medium:{label:"🟡 TB",color:"#fb8c00"},low:{label:"🟢 Thấp",color:"#43a047"}};
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyDIt6P8_eu7VHWyBbJZB6YtOisHhy4Ayl8",
+    authDomain: "hagiang-planner.firebaseapp.com",
+    databaseURL: "https://hagiang-planner-default-rtdb.firebaseio.com",
+    projectId: "hagiang-planner",
+    storageBucket: "hagiang-planner.firebasestorage.app",
+    messagingSenderId: "392909372775",
+    appId: "1:392909372775:web:af40c7404e2d665dbf03c2"
+  };
+
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.database();
+  const TRACKER_REF = db.ref("daily-tracker");
+
+  const $ = (s,r=document)=>r.querySelector(s);
+  const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
+  const today = ()=>new Date().toISOString().slice(0,10);
+  const fmtDate = d=>{const o=new Date(d+"T12:00:00");return o.toLocaleDateString("vi-VN",{weekday:"long",day:"numeric",month:"numeric",year:"numeric"})};
+  const shortDate = d=>{const o=new Date(d+"T12:00:00");return o.toLocaleDateString("vi-VN",{day:"numeric",month:"numeric"})};
+  const genId = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+  let me = localStorage.getItem("dt_me")||null;
+  let tasks = {};
+  let currentDate = today();
+  let rateChart=null, dailyChart=null, catChart=null;
+
+  // Firebase
+  firebase.database().ref(".info/connected").on("value",snap=>{
+    const dot=$("#fb-dot"),txt=$("#fb-text");
+    if(snap.val()){dot.className="dot green";txt.textContent="Đã đồng bộ"}
+    else{dot.className="dot red";txt.textContent="Mất kết nối"}
+  });
+
+  function loadUserTasks(name,callback){
+    TRACKER_REF.child(name).on("value",snap=>{
+      tasks = snap.val()||{};
+      callback();
+    });
+  }
+
+  function saveTask(id,task){
+    if(!me) return;
+    TRACKER_REF.child(me).child(id).set(task);
+  }
+
+  function deleteTask(id){
+    if(!me) return;
+    TRACKER_REF.child(me).child(id).remove();
+  }
+
+  function getDayTasks(date){
+    return Object.entries(tasks).filter(([_,t])=>t.date===date).sort((a,b)=>a.createdAt-b.createdAt);
+  }
+
+  function getCompleted(dt){
+    return getDayTasks(dt).filter(([_,t])=>t.done).length;
+  }
+
+  function getTotal(dt){
+    return getDayTasks(dt).length;
+  }
+
+  function getDatesInRange(start,end){
+    const dates=[];
+    let d=new Date(start+"T12:00:00");
+    const e=new Date(end+"T12:00:00");
+    while(d<=e){dates.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1)}
+    return dates;
+  }
+
+  function calcStreak(){
+    let streak=0;
+    let d=new Date();
+    while(true){
+      const ds=d.toISOString().slice(0,10);
+      const ttl=getTotal(ds);
+      if(ttl===0) break;
+      const done=getCompleted(ds);
+      if(done/ttl<1) break;
+      streak++;
+      d.setDate(d.getDate()-1);
+    }
+    return streak;
+  }
+
+  // Stats history
+  function getHistory(period){
+    const now=new Date();
+    let start;
+    switch(period){
+      case"week":start=new Date(now);start.setDate(now.getDate()-6);break;
+      case"month":start=new Date(now);start.setMonth(now.getMonth()-1);break;
+      case"year":start=new Date(now);start.setFullYear(now.getFullYear()-1);break;
+      default:start=new Date("2020-01-01");break;
+    }
+    const dates=getDatesInRange(start.toISOString().slice(0,10),today());
+    return dates.map(d=>{
+      const total=getTotal(d),done=getCompleted(d);
+      return{date:d,total,done,rate:total?Math.round(done/total*100):0};
+    });
+  }
+
+  function getCatData(date){
+    const dayTasks=getDayTasks(date);
+    const catCount={};
+    CATEGORIES.forEach(c=>catCount[c.id]={total:0,done:0});
+    dayTasks.forEach(([_,t])=>{
+      const c=t.category||"other";
+      if(!catCount[c]) catCount[c]={total:0,done:0};
+      catCount[c].total++;
+      if(t.done) catCount[c].done++;
+    });
+    return catCount;
+  }
+
+  // Sound
+  function playSound(){
+    try{
+      const ctx=new(window.AudioContext||window.webkitAudioContext)();
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.frequency.value=880;
+      osc.type="sine";
+      gain.gain.setValueAtTime(.3,ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.01,ctx.currentTime+.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime+.3);
+    }catch(e){}
+  }
+
+  function playAlert(){
+    try{
+      const ctx=new(window.AudioContext||window.webkitAudioContext)();
+      [440,660,880].forEach((f,i)=>{
+        const osc=ctx.createOscillator();
+        const gain=ctx.createGain();
+        osc.connect(gain);gain.connect(ctx.destination);
+        osc.frequency.value=f;
+        osc.type="sine";
+        gain.gain.setValueAtTime(.2,ctx.currentTime+i*.15);
+        gain.gain.exponentialRampToValueAtTime(.01,ctx.currentTime+i*.15+.1);
+        osc.start(ctx.currentTime+i*.15);
+        osc.stop(ctx.currentTime+i*.15+.1);
+      });
+    }catch(e){}
+  }
+
+  // Render
+  function renderStats(){
+    const dt=currentDate;
+    const total=getTotal(dt);
+    const done=getCompleted(dt);
+    const pending=total-done;
+    const rate=total?Math.round(done/total*100):0;
+    const streak=calcStreak();
+    $("#stat-total").textContent=total;
+    $("#stat-done").textContent=done;
+    $("#stat-pending").textContent=pending;
+    $("#stat-rate").textContent=rate+"%";
+    $("#stat-streak").textContent=streak;
+    $("#progress-bar").style.width=rate+"%";
+  }
+
+  function renderTasks(){
+    const dt=currentDate;
+    const dayTasks=getDayTasks(dt);
+    const host=$("#task-list");
+    host.innerHTML="";
+
+    if(dayTasks.length===0){
+      host.innerHTML='<div class="empty-state"><div class="icon">✅</div><p>Chưa có công việc nào hôm nay</p></div>';
+      renderStats();
+      return;
+    }
+
+    // Group by category
+    const grouped={};
+    CATEGORIES.forEach(c=>grouped[c.id]=[]);
+    dayTasks.forEach(([id,t])=>{
+      const cat=t.category||"other";
+      if(!grouped[cat]) grouped[cat]=[];
+      grouped[cat].push([id,t]);
+    });
+
+    CATEGORIES.forEach(c=>{
+      if(!grouped[c.id]||grouped[c.id].length===0) return;
+      const frag=document.createDocumentFragment();
+      const hdr=document.createElement("div");
+      hdr.className="category-header";
+      hdr.innerHTML=`<span>${c.label}</span> <span style="font-size:12px;font-weight:400">(${grouped[c.id].filter(([_,t])=>t.done).length}/${grouped[c.id].length})</span>`;
+      frag.appendChild(hdr);
+
+      grouped[c.id].forEach(([id,t])=>{
+        const card=document.createElement("div");
+        card.className="task-card";
+        card.innerHTML=`
+          <div class="check-wrap ${t.done?"done":""}" data-id="${id}"></div>
+          <div class="task-body">
+            <div class="task-title ${t.done?"done":""}">${esc(t.title)}</div>
+            <div class="task-meta">
+              <span class="cat-badge" style="background:${c.color}22;color:${c.color}">${c.label}</span>
+              <span class="priority-dot" style="background:${PRIORITIES[t.priority||"medium"].color}" title="${PRIORITIES[t.priority||"medium"].label}"></span>
+              <span class="time">${t.createdAt?shortDate2(t.createdAt):""}</span>
+            </div>
+          </div>
+          <div class="task-actions">
+            <button class="small" onclick="window.dtEdit('${id}')" title="Sửa">✏️</button>
+            <button class="small danger" onclick="window.dtDel('${id}')" title="Xoá">🗑️</button>
+          </div>
+        `;
+        card.querySelector(".check-wrap").addEventListener("click",()=>toggleTask(id));
+        frag.appendChild(card);
+      });
+      host.appendChild(frag);
+    });
+
+    // Check pending alert
+    const pending=getDayTasks(dt).filter(([_,t])=>!t.done).length;
+    if(pending>0&&dt===today()){
+      // Show pending count
+    }
+    renderStats();
+  }
+
+  function shortDate2(ts){
+    const d=new Date(ts);
+    return d.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
+  }
+
+  function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+
+  function toggleTask(id){
+    const t=tasks[id];
+    if(!t) return;
+    t.done=!t.done;
+    t.completedAt=t.done?Date.now():null;
+    saveTask(id,t);
+    if(t.done) playSound();
+    renderTasks();
+  }
+
+  window.dtDel=function(id){
+    if(!confirm("Xoá công việc này?")) return;
+    deleteTask(id);
+    renderTasks();
+  };
+
+  window.dtEdit=function(id){
+    const t=tasks[id];
+    if(!t) return;
+    const title=prompt("Sửa công việc:",t.title);
+    if(title&&title.trim()){
+      t.title=title.trim();
+      saveTask(id,t);
+      renderTasks();
+    }
+  };
+
+  function addTask(title,category,priority,date){
+    if(!me) return alert("Nhập tên và bấm Lưu tên trước!");
+    if(!title.trim()) return;
+    const id=genId();
+    tasks[id]={title:title.trim(),category:category||"other",priority:priority||"medium",date:date||currentDate,createdAt:Date.now(),done:false,completedAt:null};
+    saveTask(id,tasks[id]);
+    renderTasks();
+    playSound();
+  }
+
+  function bulkAdd(){
+    if(!me) return alert("Nhập tên trước!");
+    const text=prompt("Nhập danh sách công việc, mỗi dòng 1 việc:");
+    if(!text) return;
+    const lines=text.split("\n").map(s=>s.trim()).filter(s=>s);
+    lines.forEach(line=>{
+      const id=genId();
+      tasks[id]={title:line,category:"other",priority:"medium",date:currentDate,createdAt:Date.now(),done:false,completedAt:null};
+      saveTask(id,tasks[id]);
+    });
+    renderTasks();
+    playAlert();
+  }
+
+  // History
+  function renderHistory(period){
+    const data=getHistory(period);
+    const host=$("#history-list");
+    if(data.length===0){host.innerHTML='<div class="empty-state"><div class="icon">📜</div><p>Chưa có dữ liệu</p></div>';return}
+
+    host.innerHTML=data.slice().reverse().map(d=>{
+      const pct=d.rate;
+      const color=pct>=80?"var(--success)":pct>=50?"var(--warning)":"var(--danger)";
+      return `<div class="day-group">
+        <div class="day-head">
+          <span class="date">${fmtDate(d.date)}</span>
+          <span class="rate" style="color:${color}">${d.done}/${d.total} (${d.rate}%)</span>
+        </div>
+        ${d.total>0?'<div style="background:var(--border);border-radius:999px;height:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:999px"></div></div>':''}
+        <div style="margin-top:6px;font-size:12px;color:var(--text2)">
+          ${getDayTasks(d.date).slice(0,5).map(([_,t])=>`<div class="h-task"><span class="h-dot" style="background:${t.done?'var(--success)':'var(--danger)'}"></span>${esc(t.title)}</div>`).join("")}
+          ${getDayTasks(d.date).length>5?`<div style="margin-top:4px;color:var(--text2)">…và ${getDayTasks(d.date).length-5} việc khác</div>`:""}
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  // Charts
+  function updateCharts(period){
+    const data=getHistory(period);
+    const labels=data.map(d=>shortDate(d.date));
+    const rates=data.map(d=>d.rate);
+    const totals=data.map(d=>d.total);
+    const dones=data.map(d=>d.done);
+
+    const chartOpts={
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false}
+      },
+      scales:{
+        y:{beginAtZero:true,max:100,grid:{color:"rgba(0,0,0,.05)"}},
+        x:{grid:{display:false}}
+      }
+    };
+
+    // Rate chart
+    if(rateChart) rateChart.destroy();
+    rateChart=new Chart($("#rate-chart"),{
+      type:"bar",
+      data:{labels,datasets:[{
+        label:"Tỉ lệ %",
+        data:rates,
+        backgroundColor:rates.map(v=>v>=80?"rgba(46,125,50,.7)":v>=50?"rgba(245,127,23,.7)":"rgba(183,28,28,.7)"),
+        borderRadius:4
+      }]},
+      options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:false}}}
+    });
+
+    // Daily chart
+    if(dailyChart) dailyChart.destroy();
+    dailyChart=new Chart($("#daily-chart"),{
+      type:"line",
+      data:{labels,datasets:[
+        {label:"Đã làm",data:dones,borderColor:"#2e7d32",backgroundColor:"rgba(46,125,50,.1)",fill:true,tension:.3,pointRadius:3},
+        {label:"Tổng",data:totals,borderColor:"#b25a3a",backgroundColor:"rgba(178,90,58,.1)",fill:true,tension:.3,pointRadius:3,borderDash:[5,5]}
+      ]},
+      options:{...chartOpts,plugins:{legend:{display:true,position:"top"}},scales:{y:{beginAtZero:true,grid:{color:"rgba(0,0,0,.05)"}},x:{grid:{display:false}}}}
+    });
+
+    // Category chart
+    const catData=getCatData(currentDate);
+    if(catChart) catChart.destroy();
+    const catLabels=[],catValues=[],catColors=[];
+    CATEGORIES.forEach(c=>{
+      if(catData[c.id]&&catData[c.id].total>0){
+        catLabels.push(c.label);
+        catValues.push(Math.round(catData[c.id].done/catData[c.id].total*100)||0);
+        catColors.push(c.color+"80");
+      }
+    });
+    catChart=new Chart($("#cat-chart"),{
+      type:"doughnut",
+      data:{labels:catLabels,datasets:[{data:catValues.map(v=>v||1),backgroundColor:catColors}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}
+    });
+  }
+
+  // Navigate date
+  function setDate(date){
+    currentDate=date;
+    $("#date-display").textContent=fmtDate(date);
+    renderTasks();
+    renderHistory("week");
+    updateCharts("week");
+  }
+
+  // Init
+  function initUser(name){
+    if(!name) return;
+    me=name.trim();
+    localStorage.setItem("dt_me",me);
+    if(window.personRef) window.personRef.off();
+    window.personRef=TRACKER_REF.child(me);
+    window.personRef.on("value",snap=>{
+      tasks=snap.val()||{};
+      renderTasks();
+      renderHistory("week");
+      updateCharts("week");
+    });
+    $("#me").value=me;
+    $("#who").textContent="👤 "+me;
+  }
+
+  // Events
+  $("#save-me").addEventListener("click",()=>initUser($("#me").value));
+  $("#me").addEventListener("keydown",e=>{if(e.key==="Enter")initUser($("#me").value)});
+  $("#add-task").addEventListener("click",()=>{
+    addTask($("#task-input").value,$("#cat-select").value,$("#priority-select").value,currentDate);
+    $("#task-input").value="";
+  });
+  $("#task-input").addEventListener("keydown",e=>{
+    if(e.key==="Enter"){$("#add-task").click()}
+  });
+  $("#add-bulk").addEventListener("click",bulkAdd);
+  $("#prev-day").addEventListener("click",()=>{
+    const d=new Date(currentDate+"T12:00:00");
+    d.setDate(d.getDate()-1);
+    setDate(d.toISOString().slice(0,10));
+  });
+  $("#next-day").addEventListener("click",()=>{
+    const d=new Date(currentDate+"T12:00:00");
+    d.setDate(d.getDate()+1);
+    setDate(d.toISOString().slice(0,10));
+  });
+  $("#today-btn").addEventListener("click",()=>setDate(today()));
+  $("#clear-done").addEventListener("click",()=>{
+    getDayTasks(currentDate).filter(([_,t])=>t.done).forEach(([id])=>deleteTask(id));
+    renderTasks();
+  });
+  $("#export-today").addEventListener("click",()=>{
+    const dt=currentDate;
+    const items=getDayTasks(dt);
+    let txt=`Công việc ngày ${fmtDate(dt)}\n${"=".repeat(40)}\n\n`;
+    items.forEach(([_,t])=>{
+      const st=t.done?"✓":"○";
+      txt+=`${st} ${t.title} (${CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Khác"})\n`;
+    });
+    txt+=`\n${getCompleted(dt)}/${getTotal(dt)} hoàn thành`;
+    const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-"+dt+".txt";a.click();
+  });
+
+  // Tabs
+  $$(".tabs button").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      $$(".tabs button").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      $$(".tab-content").forEach(t=>t.classList.remove("active"));
+      const tab=document.getElementById("tab-"+btn.dataset.tab);
+      if(tab) tab.classList.add("active");
+      if(btn.dataset.tab==="stats")updateCharts(document.querySelector(".period-select .active")?.dataset?.period||"week");
+      if(btn.dataset.tab==="history")renderHistory("week");
+    });
+  });
+
+  // Period select
+  $$(".period-select button").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      $$(".period-select button").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      updateCharts(btn.dataset.period);
+    });
+  });
+
+  // Known users
+  TRACKER_REF.on("value",snap=>{
+    const data=snap.val()||{};
+    const names=Object.keys(data).filter(k=>!k.startsWith("_"));
+    const dl=$("#known-users");dl.innerHTML="";
+    names.forEach(n=>{const o=document.createElement("option");o.value=n;dl.appendChild(o)});
+  });
+
+  // Auto-load
+  if(me){$("#me").value=me;initUser(me)}
+  else{$("#who").textContent="Chưa đặt tên"}
+  setDate(today());
+})();
+</script>
+</body>
+</html>
