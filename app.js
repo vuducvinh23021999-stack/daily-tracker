@@ -1,15 +1,16 @@
-document.getElementById("fb-text").textContent = "ALIVE";
+
 try{
+document.getElementById("fb-text").textContent="ALIVE";
 (function(){
   const CATEGORIES = [
-    {id:"work",label:"C√¥ng vi·ªác",color:"#e53935"},
-    {id:"study",label:"H·ªçc t·∫≠p",color:"#1e88e5"},
-    {id:"health",label:"S·ª©c kh·ªèe",color:"#43a047"},
-    {id:"personal",label:"C√° nh√¢n",color:"#fb8c00"},
-    {id:"finance",label:"T√†i ch√≠nh",color:"#8e24aa"},
-    {id:"other",label:"Kh√°c",color:"#757575"}
+    {id:"work",label:"=É∆+ C+¶ng viﬂ+Ác",color:"#e53935"},
+    {id:"study",label:"=ÉÙ‹ Hﬂ+Ïc tﬂ¶°p",color:"#1e88e5"},
+    {id:"health",label:"=É≈‚ Sﬂ+¨c khﬂ+≈e",color:"#43a047"},
+    {id:"personal",label:"=É∫ˇ C+Ì nh+Ûn",color:"#fb8c00"},
+    {id:"finance",label:"=É∆¶ T+·i ch+°nh",color:"#8e24aa"},
+    {id:"other",label:"=ÉÙÓ Kh+Ìc",color:"#757575"}
   ];
-  const PRIORITIES = {high:{label:"Cao",color:"#e53935"},medium:{label:"TB",color:"#fb8c00"},low:{label:"Th·∫•p",color:"#43a047"}};
+  const PRIORITIES = {high:{label:"=Éˆ¶ Cao",color:"#e53935"},medium:{label:"=ÉÉÌ TB",color:"#fb8c00"},low:{label:"=ÉÉÛ Thﬂ¶—p",color:"#43a047"}};
   const FB_BASE="https://hagiang-planner-default-rtdb.firebaseio.com";
 
   function fbFetch(path,method,body){
@@ -28,8 +29,8 @@ try{
       .catch(e=>{
         clearTimeout(timer);
         console.error("fbFetch error:",e.message,url);
-        const dt=document.getElementById("fb-dot"),tx=document.getElementById("fb-text");
-        if(dt){dt.className="dot red";tx.textContent=e.name==="AbortError"?"H·∫øt th·ªùi gian ch·ªù":e.message.slice(0,40)}
+        const dt=$("#fb-dot"),txt=$("#fb-text");
+        if(dt){dt.className="dot red";txt.textContent=e.name==="AbortError"?"Hﬂ¶+t thﬂ+•i gian chﬂ+•":e.message.slice(0,40)}
         return null
       });
   }
@@ -57,23 +58,24 @@ try{
   let currentDate = today();
   let rateChart=null, dailyChart=null, catChart=null;
 
+  // Firebase connection
   let pollTimer=null;
   function startPolling(name){
     if(pollTimer) clearInterval(pollTimer);
     if(!name) return;
     async function poll(){
       try{
-        const dot=document.getElementById("fb-dot"),txt=document.getElementById("fb-text");
+        const dot=$("#fb-dot"),txt=$("#fb-text");
         const data=await fbFetch(name);
         if(data!==null){
-          dot.className="dot green";txt.textContent="ƒê√£ ƒë·ªìng b·ªô";
+          dot.className="dot green";txt.textContent="-…+˙ -Êﬂ+Ùng bﬂ+÷";
           tasks=Object.fromEntries(Object.entries(data||{}).filter(([k])=>k!=="_categories"&&k!=="_routines"));
           saveToLocal();
           renderTasks();
           renderHistory("week");
           updateCharts("week");
         }else{
-          dot.className="dot red";txt.textContent="M·∫•t k·∫øt n·ªëi";
+          dot.className="dot red";txt.textContent="Mﬂ¶—t kﬂ¶+t nﬂ+Êi";
           if(Object.keys(tasks).length===0&&loadFromLocal()){renderTasks();renderHistory("week")}
         }
       }catch(e){console.error("poll error:",e)}
@@ -88,6 +90,7 @@ try{
     saveToLocal();
     fbFetch(me+"/"+id,"PUT",task);
   }
+
   function deleteTask(id){
     if(!me) return;
     delete tasks[id];
@@ -96,56 +99,180 @@ try{
   }
 
   function getDayTasks(date){
-    return Object.entries(tasks).filter(([_,t])=>t.date===date);
+    return Object.entries(tasks).filter(([_,t])=>t.date===date).sort((a,b)=>a.createdAt-b.createdAt);
   }
-  function getTotal(date){return getDayTasks(date).length}
-  function getDone(date){return getDayTasks(date).filter(([_,t])=>t.done).length}
-  function getCompleted(date){return getDayTasks(date).filter(([_,t])=>t.done).length}
-  function getPending(date){return getDayTasks(date).filter(([_,t])=>!t.done).length}
-  function getRate(date){const t=getTotal(date);return t?Math.round(getDone(date)/t*100):0}
 
-  function getStreak(){
-    let streak=0,d=new Date();
+  function getCompleted(dt){
+    return getDayTasks(dt).filter(([_,t])=>t.done).length;
+  }
+
+  function getTotal(dt){
+    return getDayTasks(dt).length;
+  }
+
+  function getDatesInRange(start,end){
+    const dates=[];
+    let d=new Date(start+"T12:00:00");
+    const e=new Date(end+"T12:00:00");
+    while(d<=e){dates.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1)}
+    return dates;
+  }
+
+  function calcStreak(){
+    let streak=0;
+    let d=new Date();
     while(true){
       const ds=d.toISOString().slice(0,10);
-      const rate=getRate(ds);
-      if(rate>=50) streak++;
-      else break;
+      const ttl=getTotal(ds);
+      if(ttl===0) break;
+      const done=getCompleted(ds);
+      if(done/ttl<1) break;
+      streak++;
       d.setDate(d.getDate()-1);
     }
     return streak;
   }
 
+  // Stats history
   function getHistory(period){
-    const now=new Date(),r=[];
-    let days=period==="week"?7:period==="month"?30:period==="year"?365:999;
-    for(let i=0;i<days;i++){
-      const d=new Date(now);d.setDate(d.getDate()-i);
-      const ds=d.toISOString().slice(0,10);
-      r.push({date:ds,total:getTotal(ds),done:getDone(ds),rate:getRate(ds)});
+    const now=new Date();
+    let start;
+    switch(period){
+      case"week":start=new Date(now);start.setDate(now.getDate()-6);break;
+      case"month":start=new Date(now);start.setMonth(now.getMonth()-1);break;
+      case"year":start=new Date(now);start.setFullYear(now.getFullYear()-1);break;
+      default:start=new Date("2020-01-01");break;
     }
-    return r.reverse();
+    const dates=getDatesInRange(start.toISOString().slice(0,10),today());
+    return dates.map(d=>{
+      const total=getTotal(d),done=getCompleted(d);
+      return{date:d,total,done,rate:total?Math.round(done/total*100):0};
+    });
   }
 
   function getCatData(date){
-    const r={};
-    CATEGORIES.forEach(c=>r[c.id]={done:0,total:0});
-    getDayTasks(date).forEach(([_,t])=>{
+    const dayTasks=getDayTasks(date);
+    const catCount={};
+    CATEGORIES.forEach(c=>catCount[c.id]={total:0,done:0});
+    dayTasks.forEach(([_,t])=>{
       const c=t.category||"other";
-      if(r[c]){r[c].total++;if(t.done)r[c].done++}
+      if(!catCount[c]) catCount[c]={total:0,done:0};
+      catCount[c].total++;
+      if(t.done) catCount[c].done++;
     });
-    return r;
+    return catCount;
   }
 
-  function renderStats(){
-    const total=getTotal(currentDate),done=getDone(currentDate),pending=getPending(currentDate),rate=getRate(currentDate),streak=getStreak();
-    document.getElementById("stat-total").textContent=total;
-    document.getElementById("stat-done").textContent=done;
-    document.getElementById("stat-pending").textContent=pending;
-    document.getElementById("stat-rate").textContent=rate+"%";
-    document.getElementById("stat-streak").textContent=streak;
-    document.getElementById("progress-bar").style.width=rate+"%";
-    const cv=document.getElementById("mini-chart");
+  // Sound
+  let audioCtx=null;
+  function initAudio(){if(!audioCtx) try{audioCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+  function playSound(){
+    try{
+      if(!audioCtx) return;
+      const osc=audioCtx.createOscillator();
+      const gain=audioCtx.createGain();
+      osc.connect(gain);gain.connect(audioCtx.destination);
+      osc.frequency.value=880;osc.type="sine";
+      gain.gain.setValueAtTime(.3,audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.01,audioCtx.currentTime+.3);
+      osc.start(audioCtx.currentTime);osc.stop(audioCtx.currentTime+.3);
+    }catch(e){}
+  }
+  let alertNodes=[];
+  function playAlert(){
+    try{
+      if(!audioCtx) return;
+      const now=audioCtx.currentTime;
+      const nodes=[];
+      const melody=[523,587,659,784];
+      for(let r=0;r<4;r++){
+        melody.forEach((f,i)=>{
+          const t0=now+r*2.1+i*0.28;
+          [1,4.01].forEach((ratio,j)=>{
+            const osc=audioCtx.createOscillator();
+            const gain=audioCtx.createGain();
+            osc.connect(gain);gain.connect(audioCtx.destination);
+            osc.type="sine";
+            osc.frequency.value=f*ratio;
+            const vol=j===0?0.5:0.12;
+            gain.gain.setValueAtTime(vol,t0);
+            gain.gain.exponentialRampToValueAtTime(0.001,t0+0.35);
+            osc.start(t0);osc.stop(t0+0.4);
+            nodes.push(osc,gain);
+          });
+        });
+      }
+      alertNodes=alertNodes.concat(nodes);
+    }catch(e){}
+  }
+  function stopAlertNow(){
+    alertNodes.forEach(n=>{try{if(n.stop)n.stop();if(n.disconnect)n.disconnect()}catch(e){}});
+    alertNodes=[];
+  }
+
+  function isOverdue(t){
+    if(t.done||!t.scheduledTime||t.date!==today()) return false;
+    const now=new Date();
+    const [h,m]=t.scheduledTime.split(":").map(Number);
+    const sched=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m);
+    return (now-sched)>0;
+  }
+
+  let alertTimer=null, alertBurstTimer=null, alertRound=0;
+
+  function startBurstAlert(){
+    stopBurstAlert();
+    if(!me) return;
+    const hasOverdue=Object.entries(tasks).some(([id,t])=>isOverdue(t));
+    if(!hasOverdue) return;
+    alertRound++;
+    if(alertRound>3) return;
+    let count=0;
+    function playRound(){
+      if(count>=30||!Object.values(tasks).some(t=>!t.done&&isOverdue(t))){
+        scheduleNextBurst();
+        return;
+      }
+      playAlert();
+      count++;
+      alertBurstTimer=setTimeout(playRound,2000);
+    }
+    playRound();
+  }
+
+  function stopBurstAlert(){
+    stopAlertNow();
+    if(alertBurstTimer){clearTimeout(alertBurstTimer);alertBurstTimer=null}
+    if(alertTimer){clearTimeout(alertTimer);alertTimer=null}
+    alertRound=0;
+  }
+
+  function scheduleNextBurst(){
+    if(alertBurstTimer){clearTimeout(alertBurstTimer);alertBurstTimer=null}
+    if(!Object.values(tasks).some(t=>!t.done&&isOverdue(t))){alertRound=0;return}
+    alertTimer=setTimeout(startBurstAlert,300000);
+  }
+
+  function checkOverdueTasks(){
+    if(!me) return;
+    const hasOverdue=Object.entries(tasks).some(([id,t])=>isOverdue(t));
+    if(hasOverdue&&!alertTimer&&!alertBurstTimer) startBurstAlert();
+    else if(!hasOverdue) stopBurstAlert();
+    renderTasks();
+  }
+    const dt=currentDate;
+    const total=getTotal(dt);
+    const done=getCompleted(dt);
+    const pending=total-done;
+    const rate=total?Math.round(done/total*100):0;
+    const streak=calcStreak();
+    $("#stat-total").textContent=total;
+    $("#stat-done").textContent=done;
+    $("#stat-pending").textContent=pending;
+    $("#stat-rate").textContent=rate+"%";
+    $("#stat-streak").textContent=streak;
+    $("#progress-bar").style.width=rate+"%";
+    const cv=$("#mini-chart");
     if(cv){
       const ctx=cv.getContext("2d");
       const w=cv.width,h=cv.height,cx=w/2,cy=h/2,r=22;
@@ -161,13 +288,16 @@ try{
   function renderTasks(){
     const dt=currentDate;
     const dayTasks=getDayTasks(dt);
-    const host=document.getElementById("task-list");
+    const host=$("#task-list");
     host.innerHTML="";
+
     if(dayTasks.length===0){
-      host.innerHTML='<div class="empty-state"><div class="icon">‚úÖ</div><p>Ch∆∞a c√≥ c√¥ng vi·ªác n√†o h√¥m nay</p></div>';
+      host.innerHTML='<div class="empty-state"><div class="icon">G£‡</div><p>Ch¶¶a c+¶ c+¶ng viﬂ+Ác n+·o h+¶m nay</p></div>';
       renderStats();
       return;
     }
+
+    // Group by category
     const grouped={};
     CATEGORIES.forEach(c=>grouped[c.id]=[]);
     dayTasks.forEach(([id,t])=>{
@@ -175,169 +305,196 @@ try{
       if(!grouped[cat]) grouped[cat]=[];
       grouped[cat].push([id,t]);
     });
-    const sortedCats=CATEGORIES.filter(c=>grouped[c.id]&&grouped[c.id].length>0);
-    sortedCats.forEach(c=>{
-      const items=grouped[c.id];
-      const doneCount=items.filter(([_,t])=>t.done).length;
-      const section=document.createElement("div");section.className="cat-section";
-      section.innerHTML=`<div class="cat-header" style="border-left:3px solid ${c.color}"><span>${c.label}</span><span class="cat-count">${doneCount}/${items.length}</span></div>`;
-      host.appendChild(section);
-      items.forEach(([id,task])=>{
-        const p=task.priority||"medium";
-        const pr=PRIORITIES[p];
-        const nowH=new Date();
-        const taskH=task.scheduledTime?new Date(currentDate+"T"+task.scheduledTime):null;
-        const isOverdue=!task.done&&taskH&&nowH>taskH;
+
+    CATEGORIES.forEach(c=>{
+      if(!grouped[c.id]||grouped[c.id].length===0) return;
+      const frag=document.createDocumentFragment();
+      const hdr=document.createElement("div");
+      hdr.className="category-header";
+      hdr.innerHTML=`<span>${c.label}</span> <span style="font-size:12px;font-weight:400">(${grouped[c.id].filter(([_,t])=>t.done).length}/${grouped[c.id].length})</span>`;
+      frag.appendChild(hdr);
+
+      grouped[c.id].forEach(([id,t])=>{
         const card=document.createElement("div");
-        card.className="task-card"+(task.done?" done":"")+(isOverdue?" overdue":"");
-        const timeBadge=task.scheduledTime?`<span class="time-badge">${task.scheduledTime}${isOverdue?" ‚è∞":""}</span>`:"";
-        const pColor=pr?pr.color:"#fb8c00";
+        const ov=isOverdue(t);
+        card.className="task-card"+(ov?" overdue":"");
         card.innerHTML=`
-          <div class="task-left">
-            <input type="checkbox" ${task.done?"checked":""} data-id="${id}">
-            <div>
-              <div class="task-title">${task.title}</div>
-              <div class="task-meta">
-                <span class="task-pri" style="background:${pColor}20;color:${pColor}">${pr?pr.label:"TB"}</span>
-                ${timeBadge}
-              </div>
+          <div class="check-wrap ${t.done?"done":""}" data-id="${id}"></div>
+          <div class="task-body">
+            <div class="task-title ${t.done?"done":""}">${esc(t.title)}</div>
+            <div class="task-meta">
+              ${t.scheduledTime?`<span class="time-badge">${t.scheduledTime}</span>`:""}
+              <span class="cat-badge" style="background:${c.color}22;color:${c.color}">${c.label}</span>
+              <span class="priority-dot" style="background:${PRIORITIES[t.priority||"medium"].color}" title="${PRIORITIES[t.priority||"medium"].label}"></span>
+              <span class="time">${t.createdAt?shortDate2(t.createdAt):""}</span>
             </div>
           </div>
           <div class="task-actions">
-            <button class="edit-btn" data-id="${id}">S·ª≠a</button>
-            <button class="del-btn" data-id="${id}">Xo√°</button>
-          </div>`;
-        host.appendChild(card);
-        card.querySelector("input[type=checkbox]").addEventListener("change",function(){
-          tasks[id].done=this.checked;
-          tasks[id].completedAt=this.checked?Date.now():null;
-          saveTask(id,tasks[id]);
-          renderTasks();
-          renderHistory("week");
-          updateCharts("week");
-        });
-        card.querySelector(".del-btn").addEventListener("click",()=>{
-          if(confirm("Xo√° c√¥ng vi·ªác n√†y?")){deleteTask(id);renderTasks();renderHistory("week");updateCharts("week")}
-        });
-        card.querySelector(".edit-btn").addEventListener("click",()=>editTask(id,task));
+            <button class="small" onclick="window.dtEdit('${id}')" title="Sﬂ+°a">G£≈n+≈</button>
+            <button class="small danger" onclick="window.dtDel('${id}')" title="Xo+Ì">=É˘Ên+≈</button>
+          </div>
+        `;
+        card.querySelector(".check-wrap").addEventListener("click",()=>toggleTask(id));
+        frag.appendChild(card);
       });
+      host.appendChild(frag);
     });
+
+    // Check pending alert
+    const pending=getDayTasks(dt).filter(([_,t])=>!t.done).length;
+    if(pending>0&&dt===today()){
+      // Show pending count
+    }
     renderStats();
   }
 
-  function editTask(id,task){
-    const ov=document.createElement("div");ov.className="modal-overlay";
-    ov.style.alignItems="flex-start";ov.style.paddingTop="60px";
-    const catOpts=CATEGORIES.map(c=>`<option value="${c.id}" ${c.id===(task.category||"other")?"selected":""}>${c.label}</option>`).join("");
+  function shortDate2(ts){
+    const d=new Date(ts);
+    return d.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"});
+  }
+
+  function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+  function escCsv(s){return `"${(s||"").replace(/"/g,'""')}"`}
+  function getAllTasksFlat(){
+    const all=Object.values(tasks).filter(t=>t.date);
+    const dateMap={};
+    all.forEach(t=>{
+      if(!dateMap[t.date]) dateMap[t.date]=[];
+      dateMap[t.date].push(t);
+    });
+    return Object.keys(dateMap).sort().map(d=>({date:d,items:dateMap[d].sort((a,b)=>a.createdAt-b.createdAt)}));
+  }
+  function exportCSV(){
+    const data=getAllTasksFlat();
+    let csv="Ng+·y;Giﬂ+•;C+¶ng viﬂ+Ác;Danh mﬂ+—c;¶ªu ti+¨n;Trﬂ¶Ìng th+Ìi\n";
+    data.forEach(({date,items})=>{
+      items.forEach(t=>{
+        const cat=CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Kh+Ìc";
+        const pri=PRIORITIES[t.priority||"medium"]?.label||"TB";
+        const st=t.done?"Ho+·n th+·nh":"Ch¶¶a xong";
+        csv+=`${escCsv(date)};${escCsv(t.scheduledTime)};${escCsv(t.title)};${escCsv(cat)};${escCsv(pri)};${escCsv(st)}\n`;
+      });
+    });
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="daily-tracker.csv";a.click();
+  }
+  function exportWord(){
+    const data=getAllTasksFlat();
+    let html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Daily Tracker</title><style>
+      body{font-family:Calibri,sans-serif;margin:40px}
+      h1{color:#b25a3a;font-size:22px}
+      table{border-collapse:collapse;width:100%;margin-top:16px}
+      th{background:#b25a3a;color:#fff;padding:8px 10px;text-align:left;font-size:13px}
+      td{border:1px solid #ccc;padding:8px 10px;font-size:13px}
+      .done{background:#e8f5e9}.pending{background:#fff3e0}
+      .sum{margin-top:20px;font-size:14px;color:#666}
+    </style></head><body>
+    <h1>=ÉÙÔ Daily Tracker - B+Ìo c+Ìo c+¶ng viﬂ+Ác</h1>
+    <p>Xuﬂ¶—t ng+·y: ${new Date().toLocaleDateString("vi-VN")}</p>
+    <hr>`;
+    data.forEach(({date,items})=>{
+      const total=items.length;
+      const done=items.filter(t=>t.done).length;
+      html+=`<h2>${fmtDate(date)} (${done}/${total})</h2><table><tr><th>Giﬂ+•</th><th>C+¶ng viﬂ+Ác</th><th>Danh mﬂ+—c</th><th>¶ªu ti+¨n</th><th>Trﬂ¶Ìng th+Ìi</th></tr>`;
+      items.forEach(t=>{
+        const cat=CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Kh+Ìc";
+        const pri=PRIORITIES[t.priority||"medium"]?.label||"TB";
+        const rowClass=t.done?"done":"pending";
+        html+=`<tr class="${rowClass}"><td>${t.scheduledTime||"-"}</td><td>${esc(t.title)}</td><td>${cat}</td><td>${pri}</td><td>${t.done?"G£‡ Ho+·n th+·nh":"G≈¶ Ch¶¶a xong"}</td></tr>`;
+      });
+      html+=`</table>`;
+    });
+    const totalAll=Object.values(tasks).filter(t=>t.date).length;
+    const doneAll=Object.values(tasks).filter(t=>t.date&&t.done).length;
+    html+=`<p class="sum">Tﬂ+Úng kﬂ¶+t: ${doneAll}/${totalAll} c+¶ng viﬂ+Ác -Ê+˙ ho+·n th+·nh (${totalAll?Math.round(doneAll/totalAll*100):0}%)</p>`;
+    html+=`</body></html>`;
+    const blob=new Blob([html],{type:"application/msword;charset=utf-8"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="daily-tracker.doc";a.click();
+  }
+
+  function toggleTask(id){
+    const t=tasks[id];
+    if(!t) return;
+    initAudio();
+    t.done=!t.done;
+    t.completedAt=t.done?Date.now():null;
+    saveTask(id,t);
+    if(t.done) playSound();
+    renderTasks();
+  }
+
+  window.dtDel=function(id){
+    if(!confirm("Xo+Ì c+¶ng viﬂ+Ác n+·y?")) return;
+    deleteTask(id);
+    renderTasks();
+  };
+
+  window.dtEdit=function(id){
+    const t=tasks[id];
+    if(!t) return;
+    const ov=document.createElement("div");
+    ov.className="modal-overlay";
+    const catOpts=CATEGORIES.map(c=>`<option value="${c.id}"${c.id===(t.category||"other")?" selected":""}>${c.label}</option>`).join("");
     ov.innerHTML=`
-      <div class="add-section" style="width:90%;max-width:500px;margin:0 auto">
-        <h3 style="margin-bottom:12px">S·ª≠a c√¥ng vi·ªác</h3>
-        <div class="row">
-          <input type="date" id="edit-date" value="${task.date}" style="flex:1">
-          <input type="time" id="edit-time" value="${task.scheduledTime||""}" style="min-width:100px;flex:0.5">
-        </div>
-        <div class="row" style="margin-top:8px">
-          <input type="text" id="edit-title" value="${task.title.replace(/"/g,"&quot;")}" style="flex:1">
-        </div>
-        <div class="row" style="margin-top:8px">
-          <select id="edit-cat">${catOpts}</select>
-          <select id="edit-priority">
-            <option value="high" ${task.priority==="high"?"selected":""}>Cao</option>
-            <option value="medium" ${task.priority==="medium"||!task.priority?"selected":""}>TB</option>
-            <option value="low" ${task.priority==="low"?"selected":""}>Th·∫•p</option>
-          </select>
-          <select id="edit-status">
-            <option value="false" ${!task.done?"selected":""}>Ch∆∞a xong</option>
-            <option value="true" ${task.done?"selected":""}>Ho√†n th√†nh</option>
-          </select>
-        </div>
-        <div class="add-btn-row" style="margin-top:12px">
-          <button id="edit-save" class="primary">L∆∞u</button>
-          <button id="edit-cancel">Hu·ª∑</button>
+      <div class="modal">
+        <h3>G£≈n+≈ Sﬂ+°a c+¶ng viﬂ+Ác</h3>
+        <label>T+¨n c+¶ng viﬂ+Ác</label>
+        <input type="text" id="edit-title" value="${esc(t.title||"")}">
+        <label>Ng+·y</label>
+        <input type="date" id="edit-date" value="${t.date||""}">
+        <label>Giﬂ+•</label>
+        <input type="time" id="edit-time" value="${t.scheduledTime||""}">
+        <label>Danh mﬂ+—c</label>
+        <select id="edit-cat">${catOpts}</select>
+        <label>Mﬂ+¨c -Êﬂ+÷</label>
+        <select id="edit-priority">
+          <option value="high"${t.priority==="high"?" selected":""}>=Éˆ¶ Cao</option>
+          <option value="medium"${t.priority==="medium"?" selected":""}>=ÉÉÌ Trung b+ºnh</option>
+          <option value="low"${t.priority==="low"?" selected":""}>=ÉÉÛ Thﬂ¶—p</option>
+        </select>
+        <label>T+ºnh trﬂ¶Ìng</label>
+        <select id="edit-status">
+          <option value="false"${t.done?"":" selected"}>Ch¶¶a xong</option>
+          <option value="true"${t.done?" selected":""}>Ho+·n th+·nh</option>
+        </select>
+        <div class="modal-actions">
+          <button id="edit-save" class="primary">L¶¶u</button>
+          <button id="edit-cancel">Huﬂ++</button>
         </div>
       </div>`;
     document.body.appendChild(ov);
     ov.querySelector("#edit-cancel").addEventListener("click",()=>ov.remove());
     ov.querySelector("#edit-save").addEventListener("click",()=>{
-      tasks[id]={...task,date:ov.querySelector("#edit-date").value,title:ov.querySelector("#edit-title").value,scheduledTime:ov.querySelector("#edit-time").value||null,category:ov.querySelector("#edit-cat").value,priority:ov.querySelector("#edit-priority").value,done:ov.querySelector("#edit-status").value==="true"};
-      saveTask(id,tasks[id]);
+      const title=ov.querySelector("#edit-title").value.trim();
+      if(!title) return;
+      t.title=title;
+      t.date=ov.querySelector("#edit-date").value||t.date;
+      t.scheduledTime=ov.querySelector("#edit-time").value||null;
+      t.category=ov.querySelector("#edit-cat").value;
+      t.priority=ov.querySelector("#edit-priority").value;
+      t.done=ov.querySelector("#edit-status").value==="true";
+      t.completedAt=t.done?Date.now():null;
+      saveTask(id,t);
       renderTasks();
-      renderHistory("week");
-      updateCharts("week");
       ov.remove();
     });
     ov.querySelector("#edit-title").focus();
+    ov.querySelector("#edit-title").select();
     ov.addEventListener("click",e=>{if(e.target===ov) ov.remove()});
-  }
+  };
 
-  let audioCtx=null;
-  function initAudio(){
-    if(audioCtx) return;
-    try{audioCtx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
-  }
-  function playSound(){
-    if(!audioCtx) return;
-    try{
-      const now=audioCtx.currentTime;
-      [523,587,659,784].forEach((freq,i)=>{
-        const o=audioCtx.createOscillator();const g=audioCtx.createGain();
-        o.type="sine";o.frequency.value=freq;g.gain.setValueAtTime(0.15,now+i*0.12);
-        g.gain.exponentialRampToValueAtTime(0.001,now+i*0.12+0.35);
-        const h=audioCtx.createOscillator();h.type="sine";h.frequency.value=freq*2;
-        h.connect(g);o.connect(g);g.connect(audioCtx.destination);
-        o.start(now+i*0.12);o.stop(now+i*0.12+0.4);
-        h.start(now+i*0.12);h.stop(now+i*0.12+0.4);
-      });
-    }catch(e){}
-  }
-  function getAlertKey(){return "dt_alert_"+currentDate}
-  function startBurstAlert(){
-    let roundCounter=0;
-    const maxRounds=3;
-    let burstInterval=null;
-    function stopBurst(){if(burstInterval){clearInterval(burstInterval);burstInterval=null}}
-    function playBurst(){
-      if(roundCounter>=maxRounds){stopBurst();setTimeout(startBurstAlert,5*60*1000);return}
-      roundCounter++;
-      let playCount=0;const maxPlays=30;
-      const playInterval=setInterval(()=>{
-        if(playCount>=maxPlays){clearInterval(playInterval);return}
-        playSound();playCount++;
-      },2000);
-    }
-    if(burstInterval) clearInterval(burstInterval);
-    burstInterval=setTimeout(playBurst,1000);
-    setTimeout(stopBurst,60*1000+1000);
-  }
-  function checkOverdueTasks(){
-    if(!me) return;
-    const alerted=localStorage.getItem(getAlertKey());
-    if(alerted==="1") return;
-    const now=new Date();
-    const todayTasks=getDayTasks(currentDate);
-    let hasOverdue=false;
-    todayTasks.forEach(([id,task])=>{
-      if(task.done||!task.scheduledTime||task.lastAlerted) return;
-      const taskTime=new Date(currentDate+"T"+task.scheduledTime);
-      if(now>=taskTime&&now-taskTime<60000){
-        hasOverdue=true;
-        tasks[id].lastAlerted=Date.now();
-        saveTask(id,tasks[id]);
-      }
-    });
-    if(hasOverdue){initAudio();startBurstAlert()}
-  }
-
-  function addTask(title,cat,pri,date,time){
-    if(!me||!title.trim()) return;
+  function addTask(title,category,priority,date,scheduledTime){
+    if(!me) return alert("Nhﬂ¶°p t+¨n v+· bﬂ¶—m L¶¶u t+¨n tr¶¶ﬂ+¢c!");
+    if(!title.trim()) return;
     const id=genId();
-    tasks[id]={title:title.trim(),category:cat||"other",priority:pri||"medium",date,createdAt:Date.now(),done:false,scheduledTime:time||null};
+    tasks[id]={title:title.trim(),category:category||"other",priority:priority||"medium",date:date||currentDate,createdAt:Date.now(),done:false,completedAt:null,scheduledTime:scheduledTime||null};
     saveTask(id,tasks[id]);
     renderTasks();
+    playSound();
   }
 
   function bulkAdd(){
-    if(!me) return alert("Nh·∫≠p t√™n tr∆∞·ªõc!");
+    if(!me) return alert("Nhﬂ¶°p t+¨n tr¶¶ﬂ+¢c!");
     const ov=document.createElement("div");
     ov.className="modal-overlay";
     ov.style.alignItems="flex-start";ov.style.paddingTop="60px";
@@ -345,24 +502,24 @@ try{
     ov.innerHTML=`
       <div class="add-section" style="width:90%;max-width:600px;margin:0 auto">
         <div class="row">
-          <textarea id="bulk-text" style="min-height:100px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font:inherit;font-size:14px;color:var(--text);width:100%;box-sizing:border-box;resize:vertical" placeholder="M·ªói d√≤ng 1 c√¥ng vi·ªác:&#10;ƒêi ch·ª£&#10;H·ªçp team | 14:00&#10;T·∫≠p gym | 14:00 | health"></textarea>
+          <textarea id="bulk-text" style="min-height:100px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font:inherit;font-size:14px;color:var(--text);width:100%;box-sizing:border-box;resize:vertical" placeholder="Mﬂ+˘i d+¶ng 1 c+¶ng viﬂ+Ác:&#10;-…i chﬂ+˙&#10;Hﬂ+Ïp team | 14:00&#10;Tﬂ¶°p gym | 14:00 | health"></textarea>
         </div>
         <div class="row" style="margin-top:8px">
           <input type="time" id="bulk-time" style="min-width:100px;flex:0.5">
           <select id="bulk-cat">${catOpts}</select>
           <select id="bulk-priority">
-            <option value="high">Cao</option>
-            <option value="medium" selected>Trung b√¨nh</option>
-            <option value="low">Th·∫•p</option>
+            <option value="high">=Éˆ¶ Cao</option>
+            <option value="medium" selected>=ÉÉÌ Trung b+ºnh</option>
+            <option value="low">=ÉÉÛ Thﬂ¶—p</option>
           </select>
           <select id="bulk-status">
-            <option value="false" selected>Ch∆∞a xong</option>
-            <option value="true">Ho√†n th√†nh</option>
+            <option value="false" selected>Ch¶¶a xong</option>
+            <option value="true">Ho+·n th+·nh</option>
           </select>
         </div>
         <div class="add-btn-row" style="margin-top:12px">
-          <button id="bulk-save" class="primary">+ Th√™m t·∫•t c·∫£</button>
-          <button id="bulk-cancel">Hu·ª∑</button>
+          <button id="bulk-save" class="primary">+ Th+¨m tﬂ¶—t cﬂ¶˙</button>
+          <button id="bulk-cancel">Huﬂ++</button>
         </div>
       </div>`;
     document.body.appendChild(ov);
@@ -392,19 +549,30 @@ try{
     ov.addEventListener("click",e=>{if(e.target===ov) ov.remove()});
   }
 
+  // History
   function renderHistory(period){
     const data=getHistory(period);
-    const host=document.getElementById("history-list");
-    if(!host) return;
-    let html='<table class="history-table"><thead><tr><th>Ng√†y</th><th>T·ªïng</th><th>ƒê√£ l√†m</th><th>T·ªâ l·ªá</th></tr></thead><tbody>';
-    data.forEach(d=>{
-      const color=d.rate>=80?"green":d.rate>=50?"orange":"red";
-      html+=`<tr><td>${shortDate(d.date)}</td><td>${d.total}</td><td>${d.done}</td><td class="${color}">${d.rate}%</td></tr>`;
-    });
-    html+="</tbody></table>";
-    host.innerHTML=html;
+    const host=$("#history-list");
+    if(data.length===0){host.innerHTML='<div class="empty-state"><div class="icon">=ÉÙ£</div><p>Ch¶¶a c+¶ dﬂ+ª liﬂ+Áu</p></div>';return}
+
+    host.innerHTML=data.slice().reverse().map(d=>{
+      const pct=d.rate;
+      const color=pct>=80?"var(--success)":pct>=50?"var(--warning)":"var(--danger)";
+      return `<div class="day-group">
+        <div class="day-head">
+          <span class="date">${fmtDate(d.date)}</span>
+          <span class="rate" style="color:${color}">${d.done}/${d.total} (${d.rate}%)</span>
+        </div>
+        ${d.total>0?'<div style="background:var(--border);border-radius:999px;height:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:999px"></div></div>':''}
+        <div style="margin-top:6px;font-size:12px;color:var(--text2)">
+          ${getDayTasks(d.date).slice(0,5).map(([_,t])=>`<div class="h-task"><span class="h-dot" style="background:${t.done?'var(--success)':'var(--danger)'}"></span>${esc(t.title)}</div>`).join("")}
+          ${getDayTasks(d.date).length>5?`<div style="margin-top:4px;color:var(--text2)">G«™v+· ${getDayTasks(d.date).length-5} viﬂ+Ác kh+Ìc</div>`:""}
+        </div>
+      </div>`;
+    }).join("");
   }
 
+  // Charts
   function updateCharts(period){
     if(typeof Chart==="undefined") return;
     try{
@@ -413,89 +581,130 @@ try{
     const rates=data.map(d=>d.rate);
     const totals=data.map(d=>d.total);
     const dones=data.map(d=>d.done);
-    const chartOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100,grid:{color:"rgba(0,0,0,.05)"}},x:{grid:{display:false}}}};
+
+    const chartOpts={
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false}
+      },
+      scales:{
+        y:{beginAtZero:true,max:100,grid:{color:"rgba(0,0,0,.05)"}},
+        x:{grid:{display:false}}
+      }
+    };
+
+    // Rate chart
     if(rateChart) rateChart.destroy();
-    rateChart=new Chart(document.getElementById("rate-chart"),{type:"bar",data:{labels,datasets:[{label:"T·ªâ l·ªá %",data:rates,backgroundColor:rates.map(v=>v>=80?"rgba(46,125,50,.7)":v>=50?"rgba(245,127,23,.7)":"rgba(183,28,28,.7)"),borderRadius:4}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:false}}}});
+    rateChart=new Chart($("#rate-chart"),{
+      type:"bar",
+      data:{labels,datasets:[{
+        label:"Tﬂ+Î lﬂ+Á %",
+        data:rates,
+        backgroundColor:rates.map(v=>v>=80?"rgba(46,125,50,.7)":v>=50?"rgba(245,127,23,.7)":"rgba(183,28,28,.7)"),
+        borderRadius:4
+      }]},
+      options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:false}}}
+    });
+
+    // Daily chart
     if(dailyChart) dailyChart.destroy();
-    dailyChart=new Chart(document.getElementById("daily-chart"),{type:"line",data:{labels,datasets:[{label:"ƒê√£ l√†m",data:dones,borderColor:"#2e7d32",backgroundColor:"rgba(46,125,50,.1)",fill:true,tension:.3,pointRadius:3},{label:"T·ªïng",data:totals,borderColor:"#b25a3a",backgroundColor:"rgba(178,90,58,.1)",fill:true,tension:.3,pointRadius:3,borderDash:[5,5]}]},options:{...chartOpts,plugins:{legend:{display:true,position:"top"}},scales:{y:{beginAtZero:true,grid:{color:"rgba(0,0,0,.05)"}},x:{grid:{display:false}}}}});
+    dailyChart=new Chart($("#daily-chart"),{
+      type:"line",
+      data:{labels,datasets:[
+        {label:"-…+˙ l+·m",data:dones,borderColor:"#2e7d32",backgroundColor:"rgba(46,125,50,.1)",fill:true,tension:.3,pointRadius:3},
+        {label:"Tﬂ+Úng",data:totals,borderColor:"#b25a3a",backgroundColor:"rgba(178,90,58,.1)",fill:true,tension:.3,pointRadius:3,borderDash:[5,5]}
+      ]},
+      options:{...chartOpts,plugins:{legend:{display:true,position:"top"}},scales:{y:{beginAtZero:true,grid:{color:"rgba(0,0,0,.05)"}},x:{grid:{display:false}}}}
+    });
+
+    // Category chart
     const catData=getCatData(currentDate);
     if(catChart) catChart.destroy();
     const catLabels=[],catValues=[],catColors=[];
-    CATEGORIES.forEach(c=>{if(catData[c.id]&&catData[c.id].total>0){catLabels.push(c.label);catValues.push(Math.round(catData[c.id].done/catData[c.id].total*100)||0);catColors.push(c.color+"80")}});
-    catChart=new Chart(document.getElementById("cat-chart"),{type:"doughnut",data:{labels:catLabels,datasets:[{data:catValues.map(v=>v||1),backgroundColor:catColors}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}});
+    CATEGORIES.forEach(c=>{
+      if(catData[c.id]&&catData[c.id].total>0){
+        catLabels.push(c.label);
+        catValues.push(Math.round(catData[c.id].done/catData[c.id].total*100)||0);
+        catColors.push(c.color+"80");
+      }
+    });
+    catChart=new Chart($("#cat-chart"),{
+      type:"doughnut",
+      data:{labels:catLabels,datasets:[{data:catValues.map(v=>v||1),backgroundColor:catColors}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}
+    });
   }catch(e){console.error("updateCharts error:",e)}
-  }
 
+  // Navigate date
   function setDate(date){
     currentDate=date;
-    document.getElementById("date-display").textContent=fmtDate(date);
+    $("#date-display").textContent=fmtDate(date);
     renderTasks();
     renderHistory("week");
     updateCharts("week");
   }
 
+  // Init
   function initUser(name){
     if(!name) return;
     me=name.trim();
     localStorage.setItem("dt_me",me);
     loadFromLocal();
     startPolling(me);
-    document.getElementById("me").value=me;
-    document.getElementById("who").textContent="üë§ "+me;
+    $("#me").value=me;
+    $("#who").textContent="=ÉÊÒ "+me;
   }
 
-  function exportCSV(){
-    const items=getDayTasks(currentDate);
-    let csv="Ng√†y;Ti√™u ƒë·ªÅ;Danh m·ª•c;∆Øu ti√™n;Gi·ªù;Tr·∫°ng th√°i\n";
-    items.forEach(([_,t])=>{
-      const st=t.done?"Ho√†n th√†nh":"Ch∆∞a xong";
-      csv+=`${t.date};${t.title};${CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||""};${t.priority||""};${t.scheduledTime||""};${st}\n`;
-    });
-    const bom="\uFEFF";
-    const blob=new Blob([bom+csv],{type:"text/csv;charset=utf-8;charset=utf-8"});
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-"+currentDate+".csv";a.click();
-  }
-  function exportWord(){
-    const items=getDayTasks(currentDate);
-    let html=`<html><meta charset="utf-8"><body><h2>C√¥ng vi·ªác ng√†y ${fmtDate(currentDate)}</h2><table border="1" cellpadding="6" style="border-collapse:collapse;font-family:sans-serif"><tr><th>STT</th><th>C√¥ng vi·ªác</th><th>Danh m·ª•c</th><th>Gi·ªù</th><th>Tr·∫°ng th√°i</th></tr>`;
-    items.forEach(([_,t],i)=>{
-      const st=t.done?"‚úì":"‚óã";
-      html+=`<tr><td>${i+1}</td><td>${t.title}</td><td>${CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||""}</td><td>${t.scheduledTime||""}</td><td>${st}</td></tr>`;
-    });
-    html+=`</table></body></html>`;
-    const blob=new Blob([html],{type:"application/msword;charset=utf-8"});
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-"+currentDate+".doc";a.click();
-  }
-
-  document.getElementById("save-me").addEventListener("click",()=>{initAudio();initUser(document.getElementById("me").value)});
-  document.getElementById("me").addEventListener("keydown",e=>{if(e.key==="Enter"){initAudio();initUser(document.getElementById("me").value)}});
-  document.getElementById("add-task").addEventListener("click",()=>{
-    addTask(document.getElementById("task-input").value,document.getElementById("cat-select").value,document.getElementById("priority-select").value,currentDate,document.getElementById("task-time").value||null);
-    document.getElementById("task-input").value="";document.getElementById("task-time").value="";
+  // Events
+  $("#save-me").addEventListener("click",()=>{initAudio();initUser($("#me").value)});
+  $("#me").addEventListener("keydown",e=>{if(e.key==="Enter"){initAudio();initUser($("#me").value)}});
+  $("#add-task").addEventListener("click",()=>{
+    addTask($("#task-input").value,$("#cat-select").value,$("#priority-select").value,currentDate,$("#task-time").value||null);
+    $("#task-input").value="";
+    $("#task-time").value="";
   });
-  document.getElementById("task-input").addEventListener("keydown",e=>{if(e.key==="Enter"){document.getElementById("add-task").click()}});
-  document.getElementById("add-bulk").addEventListener("click",()=>{initAudio();bulkAdd()});
-  document.getElementById("prev-day").addEventListener("click",()=>{const d=new Date(currentDate+"T12:00:00");d.setDate(d.getDate()-1);setDate(d.toISOString().slice(0,10))});
-  document.getElementById("next-day").addEventListener("click",()=>{const d=new Date(currentDate+"T12:00:00");d.setDate(d.getDate()+1);setDate(d.toISOString().slice(0,10))});
-  document.getElementById("today-btn").addEventListener("click",()=>setDate(today()));
-  document.getElementById("clear-done").addEventListener("click",()=>{getDayTasks(currentDate).filter(([_,t])=>t.done).forEach(([id])=>deleteTask(id));renderTasks()});
-  document.getElementById("export-today").addEventListener("click",()=>{
-    const dt=currentDate;const items=getDayTasks(dt);
-    let txt=`C√¥ng vi·ªác ng√†y ${fmtDate(dt)}\n${"=".repeat(40)}\n\n`;
-    items.forEach(([_,t])=>{const st=t.done?"‚úì":"‚óã";txt+=`${st} ${t.title} (${CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Kh√°c"})\n`});
-    txt+=`\n${getCompleted(dt)}/${getTotal(dt)} ho√†n th√†nh`;
+  $("#task-input").addEventListener("keydown",e=>{
+    if(e.key==="Enter"){$("#add-task").click()}
+  });
+  $("#add-bulk").addEventListener("click",()=>{initAudio();bulkAdd()});
+  $("#prev-day").addEventListener("click",()=>{
+    const d=new Date(currentDate+"T12:00:00");
+    d.setDate(d.getDate()-1);
+    setDate(d.toISOString().slice(0,10));
+  });
+  $("#next-day").addEventListener("click",()=>{
+    const d=new Date(currentDate+"T12:00:00");
+    d.setDate(d.getDate()+1);
+    setDate(d.toISOString().slice(0,10));
+  });
+  $("#today-btn").addEventListener("click",()=>setDate(today()));
+  $("#clear-done").addEventListener("click",()=>{
+    getDayTasks(currentDate).filter(([_,t])=>t.done).forEach(([id])=>deleteTask(id));
+    renderTasks();
+  });
+  $("#export-today").addEventListener("click",()=>{
+    const dt=currentDate;
+    const items=getDayTasks(dt);
+    let txt=`C+¶ng viﬂ+Ác ng+·y ${fmtDate(dt)}\n${"=".repeat(40)}\n\n`;
+    items.forEach(([_,t])=>{
+      const st=t.done?"G£Ù":"G˘Ô";
+      txt+=`${st} ${t.title} (${CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Kh+Ìc"})\n`;
+    });
+    txt+=`\n${getCompleted(dt)}/${getTotal(dt)} ho+·n th+·nh`;
     const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-"+dt+".txt";a.click();
   });
-  document.getElementById("export-excel").addEventListener("click",exportCSV);
-  document.getElementById("export-word").addEventListener("click",exportWord);
+  $("#export-excel").addEventListener("click",exportCSV);
+  $("#export-word").addEventListener("click",exportWord);
   setInterval(checkOverdueTasks,5000);
 
-  Array.from(document.querySelectorAll(".tabs button")).forEach(btn=>{
+  // Tabs
+  $$(".tabs button").forEach(btn=>{
     btn.addEventListener("click",()=>{
-      Array.from(document.querySelectorAll(".tabs button")).forEach(b=>b.classList.remove("active"));
+      $$(".tabs button").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
-      Array.from(document.querySelectorAll(".tab-content")).forEach(t=>t.classList.remove("active"));
+      $$(".tab-content").forEach(t=>t.classList.remove("active"));
       const tab=document.getElementById("tab-"+btn.dataset.tab);
       if(tab) tab.classList.add("active");
       if(btn.dataset.tab==="stats")updateCharts(document.querySelector(".period-select .active")?.dataset?.period||"week");
@@ -503,23 +712,27 @@ try{
     });
   });
 
-  Array.from(document.querySelectorAll(".period-select button")).forEach(btn=>{
+  // Period select
+  $$(".period-select button").forEach(btn=>{
     btn.addEventListener("click",()=>{
-      Array.from(document.querySelectorAll(".period-select button")).forEach(b=>b.classList.remove("active"));
+      $$(".period-select button").forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
       updateCharts(btn.dataset.period);
     });
   });
 
+  // Known users
   fbFetch("","GET").then(data=>{
     if(!data) return;
     const names=Object.keys(data).filter(k=>!k.startsWith("_"));
-    const dl=document.getElementById("known-users");if(!dl)return;
+    const dl=$("#known-users");if(!dl)return;
     dl.innerHTML="";
     names.forEach(n=>{const o=document.createElement("option");o.value=n;dl.appendChild(o)});
   }).catch(()=>{});
 
-  if(me){document.getElementById("me").value=me;initUser(me)}
-  else{document.getElementById("who").textContent="Ch∆∞a ƒë·∫∑t t√™n"}
+  // Auto-load
+  if(me){$("#me").value=me;initUser(me)}
+  else{$("#who").textContent="Ch¶¶a -Êﬂ¶+t t+¨n"}
   setDate(today());
-})();}catch(e){console.error("App error:",e);document.getElementById("fb-text").textContent="ERROR: "+e.message}
+})();}catch(e){console.error("App error:",e)}
+

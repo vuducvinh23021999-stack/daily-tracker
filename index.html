@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Daily Tracker - Quáº£n lÃ½ cÃ´ng viá»‡c hÃ ng ngÃ y</title>
+<title>Daily Tracker - Quß¦ún l++ c+¦ng viß+çc h+áng ng+áy</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -72,7 +72,7 @@ button.danger:hover{background:var(--danger);color:#fff}
 .task-card:hover{box-shadow:var(--shadow)}
 .task-card .check-wrap{flex-shrink:0;width:24px;height:24px;border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
 .task-card .check-wrap.done{background:var(--success);border-color:var(--success)}
-.task-card .check-wrap.done::after{content:"âœ“";color:#fff;font-size:14px;font-weight:700}
+.task-card .check-wrap.done::after{content:"G£ô";color:#fff;font-size:14px;font-weight:700}
 .task-card .task-body{flex:1;min-width:0}
 .task-card .task-title{font-size:14px;font-weight:500}
 .task-card .task-title.done{text-decoration:line-through;color:var(--text2)}
@@ -145,64 +145,64 @@ button.danger:hover{background:var(--danger);color:#fff}
 <div class="app">
 
 <div class="header">
-  <h1><span>ğŸ“‹</span> Daily Tracker</h1>
+  <h1><span>=ƒôï</span> Daily Tracker</h1>
   <div class="header-right">
-    <span class="online-status"><span class="dot" id="fb-dot"></span><span id="fb-text">Äang káº¿t ná»‘iâ€¦</span></span>
+    <span class="online-status"><span class="dot" id="fb-dot"></span><span id="fb-text">-Éang kß¦+t nß+æiGÇª</span></span>
   </div>
 </div>
 
 <div class="user-bar">
-  <span class="label">NgÆ°á»i dÃ¹ng</span>
-  <input type="text" id="me" placeholder="GÃµ tÃªn rá»“i Enterâ€¦" list="known-users">
+  <span class="label">Ng¦¦ß+¥i d+¦ng</span>
+  <input type="text" id="me" placeholder="G+¦ t+¬n rß+ôi EnterGÇª" list="known-users">
   <datalist id="known-users"></datalist>
-  <button id="save-me" class="primary">LÆ°u tÃªn</button>
-  <span id="who" style="font-size:13px;color:var(--text2)">ChÆ°a Ä‘áº·t tÃªn</span>
+  <button id="save-me" class="primary">L¦¦u t+¬n</button>
+  <span id="who" style="font-size:13px;color:var(--text2)">Ch¦¦a -æß¦+t t+¬n</span>
 </div>
 
 <div class="date-nav">
-  <button id="prev-day">â€¹</button>
+  <button id="prev-day">GÇ¦</button>
   <span class="date-display" id="date-display"></span>
-  <button id="next-day">â€º</button>
-  <button id="today-btn">HÃ´m nay</button>
+  <button id="next-day">GÇ¦</button>
+  <button id="today-btn">H+¦m nay</button>
 </div>
 
 <div class="stats-bar" id="stats-bar">
-  <div class="stat-card"><div class="num" id="stat-total">0</div><div class="label">Tá»•ng</div></div>
-  <div class="stat-card"><div class="num green" id="stat-done">0</div><div class="label">ÄÃ£ lÃ m</div></div>
-  <div class="stat-card"><div class="num red" id="stat-pending">0</div><div class="label">CÃ²n láº¡i</div></div>
-  <div class="stat-card"><div class="num" id="stat-rate">0%</div><div class="label">Tá»‰ lá»‡</div></div>
+  <div class="stat-card"><div class="num" id="stat-total">0</div><div class="label">Tß+òng</div></div>
+  <div class="stat-card"><div class="num green" id="stat-done">0</div><div class="label">-É+ú l+ám</div></div>
+  <div class="stat-card"><div class="num red" id="stat-pending">0</div><div class="label">C+¦n lß¦íi</div></div>
+  <div class="stat-card"><div class="num" id="stat-rate">0%</div><div class="label">Tß+ë lß+ç</div></div>
   <div class="stat-card"><div class="num" id="stat-streak">0</div><div class="label">Streak</div></div>
-  <div class="stat-card"><canvas id="mini-chart" width="60" height="60" style="width:50px;height:50px;margin:0 auto;display:block"></canvas><div class="label" style="margin-top:-4px">HÃ´m nay</div></div>
+  <div class="stat-card"><canvas id="mini-chart" width="60" height="60" style="width:50px;height:50px;margin:0 auto;display:block"></canvas><div class="label" style="margin-top:-4px">H+¦m nay</div></div>
 </div>
 
 <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
 
 <div class="add-section">
   <div class="row">
-    <input type="text" id="task-input" placeholder="ThÃªm cÃ´ng viá»‡câ€¦">
+    <input type="text" id="task-input" placeholder="Th+¬m c+¦ng viß+çcGÇª">
     <input type="time" id="task-time" style="min-width:100px;flex:0.5">
-    <select id="cat-select"><option value="work">ğŸ’¼ CÃ´ng viá»‡c</option><option value="study">ğŸ“š Há»c táº­p</option><option value="health">ğŸƒ Sá»©c khá»e</option><option value="personal">ğŸ§˜ CÃ¡ nhÃ¢n</option><option value="finance">ğŸ’° TÃ i chÃ­nh</option><option value="other">ğŸ“Œ KhÃ¡c</option></select>
-    <select id="priority-select"><option value="high">ğŸ”´ Cao</option><option value="medium" selected>ğŸŸ¡ Trung bÃ¬nh</option><option value="low">ğŸŸ¢ Tháº¥p</option></select>
+    <select id="cat-select"><option value="work">=ƒÆ+ C+¦ng viß+çc</option><option value="study">=ƒôÜ Hß+ìc tß¦¡p</option><option value="health">=ƒÅâ Sß+¬c khß+Åe</option><option value="personal">=ƒºÿ C+í nh+ón</option><option value="finance">=ƒÆ¦ T+ái ch+¡nh</option><option value="other">=ƒôî Kh+íc</option></select>
+    <select id="priority-select"><option value="high">=ƒö¦ Cao</option><option value="medium" selected>=ƒƒí Trung b+¼nh</option><option value="low">=ƒƒó Thß¦Ñp</option></select>
   </div>
   <div class="add-btn-row">
-    <button id="add-task" class="primary">+ ThÃªm</button>
-    <button id="add-bulk">ğŸ“ ThÃªm nhiá»u</button>
+    <button id="add-task" class="primary">+ Th+¬m</button>
+    <button id="add-bulk">=ƒô¥ Th+¬m nhiß+üu</button>
   </div>
 </div>
 
 <div class="tabs">
-  <button class="active" data-tab="today">HÃ´m nay</button>
-  <button data-tab="history">Lá»‹ch sá»­</button>
-  <button data-tab="stats">Thá»‘ng kÃª</button>
+  <button class="active" data-tab="today">H+¦m nay</button>
+  <button data-tab="history">Lß+ïch sß+¡</button>
+  <button data-tab="stats">Thß+æng k+¬</button>
 </div>
 
 <div class="tab-content active" id="tab-today">
   <div id="task-list" class="task-list"></div>
   <div style="display:flex;gap:4px;margin-top:8px">
-    <button id="clear-done" class="small danger">XoÃ¡ má»¥c Ä‘Ã£ hoÃ n thÃ nh</button>
-    <button id="export-today" class="small">Xuáº¥t TXT</button>
-    <button id="export-excel" class="small">ğŸ“Š Xuáº¥t Excel</button>
-    <button id="export-word" class="small">ğŸ“ Xuáº¥t Word</button>
+    <button id="clear-done" class="small danger">Xo+í mß+Ñc -æ+ú ho+án th+ánh</button>
+    <button id="export-today" class="small">Xuß¦Ñt TXT</button>
+    <button id="export-excel" class="small">=ƒôè Xuß¦Ñt Excel</button>
+    <button id="export-word" class="small">=ƒô¥ Xuß¦Ñt Word</button>
   </div>
 </div>
 
@@ -212,21 +212,20 @@ button.danger:hover{background:var(--danger);color:#fff}
 
 <div class="tab-content" id="tab-stats">
   <div class="period-select">
-    <button data-period="week" class="active">Tuáº§n</button>
-    <button data-period="month">ThÃ¡ng</button>
-    <button data-period="year">NÄƒm</button>
-    <button data-period="all">Táº¥t cáº£</button>
+    <button data-period="week" class="active">Tuß¦ºn</button>
+    <button data-period="month">Th+íng</button>
+    <button data-period="year">N-âm</button>
+    <button data-period="all">Tß¦Ñt cß¦ú</button>
   </div>
   <div class="stats-grid">
-    <div class="chart-wrap"><h3>ğŸ“Š Tá»‰ lá»‡ hoÃ n thÃ nh</h3><canvas id="rate-chart"></canvas></div>
-    <div class="chart-wrap"><h3>ğŸ“ˆ Sá»‘ task theo ngÃ y</h3><canvas id="daily-chart"></canvas></div>
-    <div class="chart-wrap"><h3>ğŸ¯ Theo danh má»¥c</h3><canvas id="cat-chart"></canvas></div>
+    <div class="chart-wrap"><h3>=ƒôè Tß+ë lß+ç ho+án th+ánh</h3><canvas id="rate-chart"></canvas></div>
+    <div class="chart-wrap"><h3>=ƒôê Sß+æ task theo ng+áy</h3><canvas id="daily-chart"></canvas></div>
+    <div class="chart-wrap"><h3>=ƒÄ» Theo danh mß+Ñc</h3><canvas id="cat-chart"></canvas></div>
   </div>
 </div>
 
 </div>
 
-<script src="app.js?v=20260730"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>
-
