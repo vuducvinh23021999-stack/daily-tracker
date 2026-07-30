@@ -80,6 +80,7 @@ button.danger:hover{background:var(--danger);color:#fff}
 .task-card .task-title{font-size:14px;font-weight:500}
 .task-card .task-title.done{text-decoration:line-through;color:var(--text2)}
 .task-card .task-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.task-card .time-badge{font-size:11px;padding:2px 6px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--text2)}
 .task-card .cat-badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500}
 .task-card .priority-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .task-card .task-actions{display:flex;gap:4px;flex-shrink:0}
@@ -180,6 +181,7 @@ button.danger:hover{background:var(--danger);color:#fff}
 <div class="add-section">
   <div class="row">
     <input type="text" id="task-input" placeholder="Thêm công việc…">
+    <input type="time" id="task-time" style="min-width:100px;flex:0.5">
     <select id="cat-select"><option value="work">💼 Công việc</option><option value="study">📚 Học tập</option><option value="health">🏃 Sức khỏe</option><option value="personal">🧘 Cá nhân</option><option value="finance">💰 Tài chính</option><option value="other">📌 Khác</option></select>
     <select id="priority-select"><option value="high">🔴 Cao</option><option value="medium" selected>🟡 Trung bình</option><option value="low">🟢 Thấp</option></select>
   </div>
@@ -448,6 +450,7 @@ button.danger:hover{background:var(--danger);color:#fff}
           <div class="task-body">
             <div class="task-title ${t.done?"done":""}">${esc(t.title)}</div>
             <div class="task-meta">
+              ${t.scheduledTime?`<span class="time-badge">${t.scheduledTime}</span>`:""}
               <span class="cat-badge" style="background:${c.color}22;color:${c.color}">${c.label}</span>
               <span class="priority-dot" style="background:${PRIORITIES[t.priority||"medium"].color}" title="${PRIORITIES[t.priority||"medium"].label}"></span>
               <span class="time">${t.createdAt?shortDate2(t.createdAt):""}</span>
@@ -606,11 +609,11 @@ button.danger:hover{background:var(--danger);color:#fff}
     ov.addEventListener("click",e=>{if(e.target===ov) ov.remove()});
   };
 
-  function addTask(title,category,priority,date){
+  function addTask(title,category,priority,date,scheduledTime){
     if(!me) return alert("Nhập tên và bấm Lưu tên trước!");
     if(!title.trim()) return;
     const id=genId();
-    tasks[id]={title:title.trim(),category:category||"other",priority:priority||"medium",date:date||currentDate,createdAt:Date.now(),done:false,completedAt:null};
+    tasks[id]={title:title.trim(),category:category||"other",priority:priority||"medium",date:date||currentDate,createdAt:Date.now(),done:false,completedAt:null,scheduledTime:scheduledTime||null};
     saveTask(id,tasks[id]);
     renderTasks();
     playSound();
@@ -745,8 +748,9 @@ button.danger:hover{background:var(--danger);color:#fff}
   $("#save-me").addEventListener("click",()=>initUser($("#me").value));
   $("#me").addEventListener("keydown",e=>{if(e.key==="Enter")initUser($("#me").value)});
   $("#add-task").addEventListener("click",()=>{
-    addTask($("#task-input").value,$("#cat-select").value,$("#priority-select").value,currentDate);
+    addTask($("#task-input").value,$("#cat-select").value,$("#priority-select").value,currentDate,$("#task-time").value||null);
     $("#task-input").value="";
+    $("#task-time").value="";
   });
   $("#task-input").addEventListener("keydown",e=>{
     if(e.key==="Enter"){$("#add-task").click()}
