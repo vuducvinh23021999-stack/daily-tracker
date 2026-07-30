@@ -228,7 +228,7 @@ button.danger:hover{background:var(--danger);color:#fff}
 </div>
 
 <script>
-(function(){
+try{(function(){
   const CATEGORIES = [
     {id:"work",label:"💼 Công việc",color:"#e53935"},
     {id:"study",label:"📚 Học tập",color:"#1e88e5"},
@@ -241,9 +241,16 @@ button.danger:hover{background:var(--danger);color:#fff}
   const FB_BASE="https://hagiang-planner-default-rtdb.firebaseio.com";
 
   function fbFetch(path,method,body){
-    const url=FB_BASE+"/daily-tracker/"+(path||"")+".json";
+    const enc=path?path.split("/").map(s=>encodeURIComponent(s)).join("/"):"";
+    const url=FB_BASE+"/daily-tracker/"+enc+".json";
     return fetch(url,method?{method,body:body?JSON.stringify(body):void 0,headers:{"Content-Type":"application/json"}}:{})
-      .then(r=>r.json()).catch(()=>null);
+      .then(async r=>{
+        if(!r.ok) throw new Error(r.status+" "+r.statusText);
+        const text=await r.text();
+        if(!text) return null;
+        try{return JSON.parse(text)}catch(e){throw new Error("JSON parse error: "+text.slice(0,200))}
+      })
+      .catch(e=>{console.error("fbFetch error:",e.message,url);return null});
   }
 
   function saveToLocal(){
@@ -275,18 +282,21 @@ button.danger:hover{background:var(--danger);color:#fff}
     if(pollTimer) clearInterval(pollTimer);
     if(!name) return;
     async function poll(){
-      const dot=$("#fb-dot"),txt=$("#fb-text");
-      const data=await fbFetch(name);
-      if(data!==null){
-        dot.className="dot green";txt.textContent="Đã đồng bộ";
-        tasks=Object.fromEntries(Object.entries(data||{}).filter(([k])=>k!=="_categories"&&k!=="_routines"));
-        saveToLocal();
-        renderTasks();
-        renderHistory("week");
-        updateCharts("week");
-      }else{
-        dot.className="dot red";txt.textContent="Mất kết nối";
-      }
+      try{
+        const dot=$("#fb-dot"),txt=$("#fb-text");
+        const data=await fbFetch(name);
+        if(data!==null){
+          dot.className="dot green";txt.textContent="Đã đồng bộ";
+          tasks=Object.fromEntries(Object.entries(data||{}).filter(([k])=>k!=="_categories"&&k!=="_routines"));
+          saveToLocal();
+          renderTasks();
+          renderHistory("week");
+          updateCharts("week");
+        }else{
+          dot.className="dot red";txt.textContent="Mất kết nối";
+          if(Object.keys(tasks).length===0&&loadFromLocal()){renderTasks();renderHistory("week")}
+        }
+      }catch(e){console.error("poll error:",e)}
     }
     poll();
     pollTimer=setInterval(poll,5000);
@@ -782,6 +792,8 @@ button.danger:hover{background:var(--danger);color:#fff}
 
   // Charts
   function updateCharts(period){
+    if(typeof Chart==="undefined") return;
+    try{
     const data=getHistory(period);
     const labels=data.map(d=>shortDate(d.date));
     const rates=data.map(d=>d.rate);
@@ -840,7 +852,7 @@ button.danger:hover{background:var(--danger);color:#fff}
       data:{labels:catLabels,datasets:[{data:catValues.map(v=>v||1),backgroundColor:catColors}]},
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}
     });
-  }
+  }catch(e){console.error("updateCharts error:",e)}
 
   // Navigate date
   function setDate(date){
@@ -940,7 +952,7 @@ button.danger:hover{background:var(--danger);color:#fff}
   if(me){$("#me").value=me;initUser(me)}
   else{$("#who").textContent="Chưa đặt tên"}
   setDate(today());
-})();
+})();}catch(e){console.error("App error:",e)}
 </script>
 </body>
 </html>
