@@ -81,6 +81,8 @@ button.danger:hover{background:var(--danger);color:#fff}
 .task-card .task-title.done{text-decoration:line-through;color:var(--text2)}
 .task-card .task-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .task-card .time-badge{font-size:11px;padding:2px 6px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--text2)}
+.task-card.overdue{border-color:var(--danger);background:#fff5f5}
+.task-card.overdue .time-badge{border-color:var(--danger);color:var(--danger);background:#ffe0e0}
 .task-card .cat-badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500}
 .task-card .priority-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .task-card .task-actions{display:flex;gap:4px;flex-shrink:0}
@@ -354,40 +356,102 @@ button.danger:hover{background:var(--danger);color:#fff}
   }
 
   // Sound
+  let audioCtx=null;
+  function initAudio(){if(!audioCtx) try{audioCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
   function playSound(){
     try{
-      const ctx=new(window.AudioContext||window.webkitAudioContext)();
-      const osc=ctx.createOscillator();
-      const gain=ctx.createGain();
-      osc.connect(gain);gain.connect(ctx.destination);
-      osc.frequency.value=880;
-      osc.type="sine";
-      gain.gain.setValueAtTime(.3,ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(.01,ctx.currentTime+.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime+.3);
+      if(!audioCtx) return;
+      const osc=audioCtx.createOscillator();
+      const gain=audioCtx.createGain();
+      osc.connect(gain);gain.connect(audioCtx.destination);
+      osc.frequency.value=880;osc.type="sine";
+      gain.gain.setValueAtTime(.3,audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.01,audioCtx.currentTime+.3);
+      osc.start(audioCtx.currentTime);osc.stop(audioCtx.currentTime+.3);
     }catch(e){}
   }
-
+  let alertNodes=[];
   function playAlert(){
     try{
-      const ctx=new(window.AudioContext||window.webkitAudioContext)();
-      [440,660,880].forEach((f,i)=>{
-        const osc=ctx.createOscillator();
-        const gain=ctx.createGain();
-        osc.connect(gain);gain.connect(ctx.destination);
-        osc.frequency.value=f;
-        osc.type="sine";
-        gain.gain.setValueAtTime(.2,ctx.currentTime+i*.15);
-        gain.gain.exponentialRampToValueAtTime(.01,ctx.currentTime+i*.15+.1);
-        osc.start(ctx.currentTime+i*.15);
-        osc.stop(ctx.currentTime+i*.15+.1);
-      });
+      if(!audioCtx) return;
+      const now=audioCtx.currentTime;
+      const nodes=[];
+      const melody=[523,587,659,784];
+      for(let r=0;r<4;r++){
+        melody.forEach((f,i)=>{
+          const t0=now+r*2.1+i*0.28;
+          [1,4.01].forEach((ratio,j)=>{
+            const osc=audioCtx.createOscillator();
+            const gain=audioCtx.createGain();
+            osc.connect(gain);gain.connect(audioCtx.destination);
+            osc.type="sine";
+            osc.frequency.value=f*ratio;
+            const vol=j===0?0.5:0.12;
+            gain.gain.setValueAtTime(vol,t0);
+            gain.gain.exponentialRampToValueAtTime(0.001,t0+0.35);
+            osc.start(t0);osc.stop(t0+0.4);
+            nodes.push(osc,gain);
+          });
+        });
+      }
+      alertNodes=alertNodes.concat(nodes);
     }catch(e){}
   }
+  function stopAlertNow(){
+    alertNodes.forEach(n=>{try{if(n.stop)n.stop();if(n.disconnect)n.disconnect()}catch(e){}});
+    alertNodes=[];
+  }
 
-  // Render
-  function renderStats(){
+  function isOverdue(t){
+    if(t.done||!t.scheduledTime||t.date!==today()) return false;
+    const now=new Date();
+    const [h,m]=t.scheduledTime.split(":").map(Number);
+    const sched=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m);
+    return (now-sched)>0;
+  }
+
+  let alertTimer=null, alertBurstTimer=null, alertRound=0;
+
+  function startBurstAlert(){
+    stopBurstAlert();
+    if(!me) return;
+    const hasOverdue=Object.entries(tasks).some(([id,t])=>isOverdue(t));
+    if(!hasOverdue) return;
+    alertRound++;
+    if(alertRound>3) return;
+    let count=0;
+    function playRound(){
+      if(count>=60||!Object.values(tasks).some(t=>!t.done&&isOverdue(t))){
+        scheduleNextBurst();
+        return;
+      }
+      playAlert();
+      count++;
+      alertBurstTimer=setTimeout(playRound,2000);
+    }
+    playRound();
+  }
+
+  function stopBurstAlert(){
+    stopAlertNow();
+    if(alertBurstTimer){clearTimeout(alertBurstTimer);alertBurstTimer=null}
+    if(alertTimer){clearTimeout(alertTimer);alertTimer=null}
+    alertRound=0;
+  }
+
+  function scheduleNextBurst(){
+    if(alertBurstTimer){clearTimeout(alertBurstTimer);alertBurstTimer=null}
+    if(!Object.values(tasks).some(t=>!t.done&&isOverdue(t))){alertRound=0;return}
+    alertTimer=setTimeout(startBurstAlert,300000);
+  }
+
+  function checkOverdueTasks(){
+    if(!me) return;
+    const hasOverdue=Object.entries(tasks).some(([id,t])=>isOverdue(t));
+    if(hasOverdue&&!alertTimer&&!alertBurstTimer) startBurstAlert();
+    else if(!hasOverdue) stopBurstAlert();
+    renderTasks();
+  }
     const dt=currentDate;
     const total=getTotal(dt);
     const done=getCompleted(dt);
@@ -444,7 +508,8 @@ button.danger:hover{background:var(--danger);color:#fff}
 
       grouped[c.id].forEach(([id,t])=>{
         const card=document.createElement("div");
-        card.className="task-card";
+        const ov=isOverdue(t);
+        card.className="task-card"+(ov?" overdue":"");
         card.innerHTML=`
           <div class="check-wrap ${t.done?"done":""}" data-id="${id}"></div>
           <div class="task-body">
@@ -542,6 +607,7 @@ button.danger:hover{background:var(--danger);color:#fff}
   function toggleTask(id){
     const t=tasks[id];
     if(!t) return;
+    initAudio();
     t.done=!t.done;
     t.completedAt=t.done?Date.now():null;
     saveTask(id,t);
@@ -787,8 +853,8 @@ button.danger:hover{background:var(--danger);color:#fff}
   }
 
   // Events
-  $("#save-me").addEventListener("click",()=>initUser($("#me").value));
-  $("#me").addEventListener("keydown",e=>{if(e.key==="Enter")initUser($("#me").value)});
+  $("#save-me").addEventListener("click",()=>{initAudio();initUser($("#me").value)});
+  $("#me").addEventListener("keydown",e=>{if(e.key==="Enter"){initAudio();initUser($("#me").value)}});
   $("#add-task").addEventListener("click",()=>{
     addTask($("#task-input").value,$("#cat-select").value,$("#priority-select").value,currentDate,$("#task-time").value||null);
     $("#task-input").value="";
@@ -797,7 +863,7 @@ button.danger:hover{background:var(--danger);color:#fff}
   $("#task-input").addEventListener("keydown",e=>{
     if(e.key==="Enter"){$("#add-task").click()}
   });
-  $("#add-bulk").addEventListener("click",bulkAdd);
+  $("#add-bulk").addEventListener("click",()=>{initAudio();bulkAdd()});
   $("#prev-day").addEventListener("click",()=>{
     const d=new Date(currentDate+"T12:00:00");
     d.setDate(d.getDate()-1);
@@ -827,6 +893,7 @@ button.danger:hover{background:var(--danger);color:#fff}
   });
   $("#export-excel").addEventListener("click",exportCSV);
   $("#export-word").addEventListener("click",exportWord);
+  setInterval(checkOverdueTasks,5000);
 
   // Tabs
   $$(".tabs button").forEach(btn=>{
