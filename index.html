@@ -192,6 +192,8 @@ button.danger:hover{background:var(--danger);color:#fff}
   <div style="display:flex;gap:4px;margin-top:8px">
     <button id="clear-done" class="small danger">Xoá mục đã hoàn thành</button>
     <button id="export-today" class="small">Xuất TXT</button>
+    <button id="export-excel" class="small">📊 Xuất Excel</button>
+    <button id="export-word" class="small">📝 Xuất Word</button>
   </div>
 </div>
 
@@ -457,6 +459,63 @@ button.danger:hover{background:var(--danger);color:#fff}
   }
 
   function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+  function escCsv(s){return `"${(s||"").replace(/"/g,'""')}"`}
+  function getAllTasksFlat(){
+    const all=Object.values(tasks).filter(t=>t.date);
+    const dateMap={};
+    all.forEach(t=>{
+      if(!dateMap[t.date]) dateMap[t.date]=[];
+      dateMap[t.date].push(t);
+    });
+    return Object.keys(dateMap).sort().map(d=>({date:d,items:dateMap[d].sort((a,b)=>a.createdAt-b.createdAt)}));
+  }
+  function exportCSV(){
+    const data=getAllTasksFlat();
+    let csv="Ngày;Giờ;Công việc;Danh mục;Ưu tiên;Trạng thái\n";
+    data.forEach(({date,items})=>{
+      items.forEach(t=>{
+        const cat=CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Khác";
+        const pri=PRIORITIES[t.priority||"medium"]?.label||"TB";
+        const st=t.done?"Hoàn thành":"Chưa xong";
+        csv+=`${escCsv(date)};${escCsv(t.scheduledTime)};${escCsv(t.title)};${escCsv(cat)};${escCsv(pri)};${escCsv(st)}\n`;
+      });
+    });
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="daily-tracker.csv";a.click();
+  }
+  function exportWord(){
+    const data=getAllTasksFlat();
+    let html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Daily Tracker</title><style>
+      body{font-family:Calibri,sans-serif;margin:40px}
+      h1{color:#b25a3a;font-size:22px}
+      table{border-collapse:collapse;width:100%;margin-top:16px}
+      th{background:#b25a3a;color:#fff;padding:8px 10px;text-align:left;font-size:13px}
+      td{border:1px solid #ccc;padding:8px 10px;font-size:13px}
+      .done{background:#e8f5e9}.pending{background:#fff3e0}
+      .sum{margin-top:20px;font-size:14px;color:#666}
+    </style></head><body>
+    <h1>📋 Daily Tracker - Báo cáo công việc</h1>
+    <p>Xuất ngày: ${new Date().toLocaleDateString("vi-VN")}</p>
+    <hr>`;
+    data.forEach(({date,items})=>{
+      const total=items.length;
+      const done=items.filter(t=>t.done).length;
+      html+=`<h2>${fmtDate(date)} (${done}/${total})</h2><table><tr><th>Giờ</th><th>Công việc</th><th>Danh mục</th><th>Ưu tiên</th><th>Trạng thái</th></tr>`;
+      items.forEach(t=>{
+        const cat=CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Khác";
+        const pri=PRIORITIES[t.priority||"medium"]?.label||"TB";
+        const rowClass=t.done?"done":"pending";
+        html+=`<tr class="${rowClass}"><td>${t.scheduledTime||"-"}</td><td>${esc(t.title)}</td><td>${cat}</td><td>${pri}</td><td>${t.done?"✅ Hoàn thành":"⏳ Chưa xong"}</td></tr>`;
+      });
+      html+=`</table>`;
+    });
+    const totalAll=Object.values(tasks).filter(t=>t.date).length;
+    const doneAll=Object.values(tasks).filter(t=>t.date&&t.done).length;
+    html+=`<p class="sum">Tổng kết: ${doneAll}/${totalAll} công việc đã hoàn thành (${totalAll?Math.round(doneAll/totalAll*100):0}%)</p>`;
+    html+=`</body></html>`;
+    const blob=new Blob([html],{type:"application/msword;charset=utf-8"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="daily-tracker.doc";a.click();
+  }
 
   function toggleTask(id){
     const t=tasks[id];
@@ -658,6 +717,8 @@ button.danger:hover{background:var(--danger);color:#fff}
     const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-"+dt+".txt";a.click();
   });
+  $("#export-excel").addEventListener("click",exportCSV);
+  $("#export-word").addEventListener("click",exportWord);
 
   // Tabs
   $$(".tabs button").forEach(btn=>{
