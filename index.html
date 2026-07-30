@@ -172,6 +172,7 @@ button.danger:hover{background:var(--danger);color:#fff}
   <div class="stat-card"><div class="num red" id="stat-pending">0</div><div class="label">Còn lại</div></div>
   <div class="stat-card"><div class="num" id="stat-rate">0%</div><div class="label">Tỉ lệ</div></div>
   <div class="stat-card"><div class="num" id="stat-streak">0</div><div class="label">Streak</div></div>
+  <div class="stat-card"><canvas id="mini-chart" width="60" height="60" style="width:50px;height:50px;margin:0 auto;display:block"></canvas><div class="label" style="margin-top:-4px">Hôm nay</div></div>
 </div>
 
 <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
@@ -397,6 +398,17 @@ button.danger:hover{background:var(--danger);color:#fff}
     $("#stat-rate").textContent=rate+"%";
     $("#stat-streak").textContent=streak;
     $("#progress-bar").style.width=rate+"%";
+    const cv=$("#mini-chart");
+    if(cv){
+      const ctx=cv.getContext("2d");
+      const w=cv.width,h=cv.height,cx=w/2,cy=h/2,r=22;
+      ctx.clearRect(0,0,w,h);
+      ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.strokeStyle="#e0d8c6";ctx.lineWidth=6;ctx.stroke();
+      if(rate>0){
+        ctx.beginPath();ctx.arc(cx,cy,r,-Math.PI/2,(-Math.PI/2)+(Math.PI*2*rate/100));ctx.strokeStyle="#2e7d32";ctx.lineWidth=6;ctx.lineCap="round";ctx.stroke();
+      }
+      ctx.fillStyle="var(--text)";ctx.font="bold 12px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(rate+"%",cx,cy);
+    }
   }
 
   function renderTasks(){
