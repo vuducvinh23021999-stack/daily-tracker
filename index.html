@@ -228,7 +228,11 @@ button.danger:hover{background:var(--danger);color:#fff}
 
 <script>
 try{(function(){
-  const d=document.getElementById("fb-text");if(d)d.textContent="JS OK";
+  try{
+    const d=document.getElementById("fb-text");if(d)d.textContent="JS OK";
+  }catch(initErr){
+    document.body.insertAdjacentHTML("afterbegin","<div style='background:red;color:white;padding:10px'>INIT ERROR: "+initErr.message+"</div>");
+  }
   const CATEGORIES = [
     {id:"work",label:"💼 Công việc",color:"#e53935"},
     {id:"study",label:"📚 Học tập",color:"#1e88e5"},
