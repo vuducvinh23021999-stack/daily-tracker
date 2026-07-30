@@ -621,16 +621,58 @@ button.danger:hover{background:var(--danger);color:#fff}
 
   function bulkAdd(){
     if(!me) return alert("Nhập tên trước!");
-    const text=prompt("Nhập danh sách công việc, mỗi dòng 1 việc:");
-    if(!text) return;
-    const lines=text.split("\n").map(s=>s.trim()).filter(s=>s);
-    lines.forEach(line=>{
-      const id=genId();
-      tasks[id]={title:line,category:"other",priority:"medium",date:currentDate,createdAt:Date.now(),done:false,completedAt:null};
-      saveTask(id,tasks[id]);
+    const ov=document.createElement("div");
+    ov.className="modal-overlay";
+    ov.style.alignItems="flex-start";ov.style.paddingTop="60px";
+    const catOpts=CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join("");
+    ov.innerHTML=`
+      <div class="add-section" style="width:90%;max-width:600px;margin:0 auto">
+        <div class="row">
+          <textarea id="bulk-text" style="min-height:100px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font:inherit;font-size:14px;color:var(--text);width:100%;box-sizing:border-box;resize:vertical" placeholder="Mỗi dòng 1 công việc:&#10;Đi chợ&#10;Họp team | 14:00&#10;Tập gym | 14:00 | health"></textarea>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <input type="time" id="bulk-time" style="min-width:100px;flex:0.5">
+          <select id="bulk-cat">${catOpts}</select>
+          <select id="bulk-priority">
+            <option value="high">🔴 Cao</option>
+            <option value="medium" selected>🟡 Trung bình</option>
+            <option value="low">🟢 Thấp</option>
+          </select>
+          <select id="bulk-status">
+            <option value="false" selected>Chưa xong</option>
+            <option value="true">Hoàn thành</option>
+          </select>
+        </div>
+        <div class="add-btn-row" style="margin-top:12px">
+          <button id="bulk-save" class="primary">+ Thêm tất cả</button>
+          <button id="bulk-cancel">Huỷ</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    ov.querySelector("#bulk-cancel").addEventListener("click",()=>ov.remove());
+    ov.querySelector("#bulk-save").addEventListener("click",()=>{
+      const text=ov.querySelector("#bulk-text").value;
+      if(!text.trim()) return;
+      const defaultTime=ov.querySelector("#bulk-time").value||null;
+      const defaultCat=ov.querySelector("#bulk-cat").value;
+      const defaultPri=ov.querySelector("#bulk-priority").value;
+      const defaultDone=ov.querySelector("#bulk-status").value==="true";
+      const lines=text.split("\n").map(s=>s.trim()).filter(s=>s);
+      lines.forEach(line=>{
+        const id=genId();
+        const parts=line.split("|").map(s=>s.trim());
+        const title=parts[0];
+        const time=parts[1]||defaultTime;
+        const cat=parts[2]||defaultCat;
+        const pri=parts[3]||defaultPri;
+        tasks[id]={title,category:cat,priority:pri,date:currentDate,createdAt:Date.now(),done:defaultDone,completedAt:defaultDone?Date.now():null,scheduledTime:time||null};
+        saveTask(id,tasks[id]);
+      });
+      renderTasks();
+      ov.remove();
     });
-    renderTasks();
-    playAlert();
+    ov.querySelector("#bulk-text").focus();
+    ov.addEventListener("click",e=>{if(e.target===ov) ov.remove()});
   }
 
   // History
