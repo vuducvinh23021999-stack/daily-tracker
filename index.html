@@ -100,6 +100,13 @@ button.danger:hover{background:var(--danger);color:#fff}
 .period-select{display:flex;gap:4px;margin-bottom:12px}
 .period-select button{flex:1;padding:6px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent}
 .period-select button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal{background:var(--surface);border-radius:var(--radius);padding:24px;width:90%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.modal h3{font-size:16px;margin-bottom:16px}
+.modal label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;margin-top:12px}
+.modal input,.modal select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font:inherit;font-size:14px;background:var(--surface2);color:var(--text);box-sizing:border-box}
+.modal .modal-actions{display:flex;gap:8px;margin-top:20px}
+.modal .modal-actions button{flex:1}
 
 .history-list .day-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
 .history-list .day-group .day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -536,12 +543,55 @@ button.danger:hover{background:var(--danger);color:#fff}
   window.dtEdit=function(id){
     const t=tasks[id];
     if(!t) return;
-    const title=prompt("Sửa công việc:",t.title);
-    if(title&&title.trim()){
-      t.title=title.trim();
+    const ov=document.createElement("div");
+    ov.className="modal-overlay";
+    const catOpts=CATEGORIES.map(c=>`<option value="${c.id}"${c.id===(t.category||"other")?" selected":""}>${c.label}</option>`).join("");
+    ov.innerHTML=`
+      <div class="modal">
+        <h3>✏️ Sửa công việc</h3>
+        <label>Tên công việc</label>
+        <input type="text" id="edit-title" value="${esc(t.title||"")}">
+        <label>Ngày</label>
+        <input type="date" id="edit-date" value="${t.date||""}">
+        <label>Giờ</label>
+        <input type="time" id="edit-time" value="${t.scheduledTime||""}">
+        <label>Danh mục</label>
+        <select id="edit-cat">${catOpts}</select>
+        <label>Mức độ</label>
+        <select id="edit-priority">
+          <option value="high"${t.priority==="high"?" selected":""}>🔴 Cao</option>
+          <option value="medium"${t.priority==="medium"?" selected":""}>🟡 Trung bình</option>
+          <option value="low"${t.priority==="low"?" selected":""}>🟢 Thấp</option>
+        </select>
+        <label>Tình trạng</label>
+        <select id="edit-status">
+          <option value="false"${t.done?"":" selected"}>Chưa xong</option>
+          <option value="true"${t.done?" selected":""}>Hoàn thành</option>
+        </select>
+        <div class="modal-actions">
+          <button id="edit-save" class="primary">Lưu</button>
+          <button id="edit-cancel">Huỷ</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    ov.querySelector("#edit-cancel").addEventListener("click",()=>ov.remove());
+    ov.querySelector("#edit-save").addEventListener("click",()=>{
+      const title=ov.querySelector("#edit-title").value.trim();
+      if(!title) return;
+      t.title=title;
+      t.date=ov.querySelector("#edit-date").value||t.date;
+      t.scheduledTime=ov.querySelector("#edit-time").value||null;
+      t.category=ov.querySelector("#edit-cat").value;
+      t.priority=ov.querySelector("#edit-priority").value;
+      t.done=ov.querySelector("#edit-status").value==="true";
+      t.completedAt=t.done?Date.now():null;
       saveTask(id,t);
       renderTasks();
-    }
+      ov.remove();
+    });
+    ov.querySelector("#edit-title").focus();
+    ov.querySelector("#edit-title").select();
+    ov.addEventListener("click",e=>{if(e.target===ov) ov.remove()});
   };
 
   function addTask(title,category,priority,date){
