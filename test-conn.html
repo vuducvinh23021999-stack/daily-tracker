@@ -1,0 +1,24 @@
+<!DOCTYPE html><html><body>
+<h2>Test JSONP Firebase</h2>
+<p id="status">Đang kiểm tra...</p>
+<script>
+function test(){
+  const id="cb_test_"+Date.now();
+  window[id]=function(data){
+    if(data&&typeof data==="object"&&Object.keys(data).length>0){
+      document.getElementById("status").innerHTML="<b style='color:green'>OK - Firebase trả về " + Object.keys(data).length + " tasks</b>";
+    } else {
+      document.getElementById("status").innerHTML="<b style='color:red'>LỖI - data null/undefined</b>";
+    }
+    delete window[id];
+  };
+  const s=document.createElement("script");
+  s.src="https://hagiang-planner-default-rtdb.firebaseio.com/daily-tracker/V%C5%A9%20%C4%90%E1%BB%A9c%20Vinh.json?callback="+id+"&t="+Date.now();
+  s.onerror=function(){document.getElementById("status").innerHTML="<b style='color:red'>LỖI - script tag failed</b>";delete window[id]};
+  s.onload=function(){setTimeout(function(){if(window[id]){document.getElementById("status").innerHTML="<b style='color:red'>LỖI - loaded but callback not called</b>";delete window[id]}},1000)};
+  document.body.appendChild(s);
+  setTimeout(function(){if(window[id]){document.getElementById("status").innerHTML="<b style='color:red'>LỖI - timeout</b>";delete window[id]}},10000);
+}
+test();
+</script>
+</body></html>
