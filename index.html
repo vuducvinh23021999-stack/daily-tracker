@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Daily Tracker - Quản lý công việc hàng ngày</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-database-compat.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -240,19 +238,24 @@ button.danger:hover{background:var(--danger);color:#fff}
     {id:"other",label:"📌 Khác",color:"#757575"}
   ];
   const PRIORITIES = {high:{label:"🔴 Cao",color:"#e53935"},medium:{label:"🟡 TB",color:"#fb8c00"},low:{label:"🟢 Thấp",color:"#43a047"}};
-  const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyDIt6P8_eu7VHWyBbJZB6YtOisHhy4Ayl8",
-    authDomain: "hagiang-planner.firebaseapp.com",
-    databaseURL: "https://hagiang-planner-default-rtdb.firebaseio.com",
-    projectId: "hagiang-planner",
-    storageBucket: "hagiang-planner.firebasestorage.app",
-    messagingSenderId: "392909372775",
-    appId: "1:392909372775:web:af40c7404e2d665dbf03c2"
-  };
+  const FB_BASE="https://hagiang-planner-default-rtdb.firebaseio.com";
 
-  firebase.initializeApp(FIREBASE_CONFIG);
-  const db = firebase.database();
-  const TRACKER_REF = db.ref("daily-tracker");
+  function fbFetch(path,method,body){
+    const url=FB_BASE+"/daily-tracker/"+(path||"")+".json";
+    return fetch(url,method?{method,body:body?JSON.stringify(body):void 0,headers:{"Content-Type":"application/json"}}:{})
+      .then(r=>r.json()).catch(()=>null);
+  }
+
+  function saveToLocal(){
+    try{localStorage.setItem("dt_tasks_"+me,JSON.stringify(tasks))}catch(e){}
+  }
+  function loadFromLocal(){
+    try{
+      const d=localStorage.getItem("dt_tasks_"+me);
+      if(d){tasks=JSON.parse(d);return true}
+    }catch(e){}
+    return false;
+  }
 
   const $ = (s,r=document)=>r.querySelector(s);
   const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -266,28 +269,41 @@ button.danger:hover{background:var(--danger);color:#fff}
   let currentDate = today();
   let rateChart=null, dailyChart=null, catChart=null;
 
-  // Firebase
-  firebase.database().ref(".info/connected").on("value",snap=>{
-    const dot=$("#fb-dot"),txt=$("#fb-text");
-    if(snap.val()){dot.className="dot green";txt.textContent="Đã đồng bộ"}
-    else{dot.className="dot red";txt.textContent="Mất kết nối"}
-  });
-
-  function loadUserTasks(name,callback){
-    TRACKER_REF.child(name).on("value",snap=>{
-      tasks = snap.val()||{};
-      callback();
-    });
+  // Firebase connection
+  let pollTimer=null;
+  function startPolling(name){
+    if(pollTimer) clearInterval(pollTimer);
+    if(!name) return;
+    async function poll(){
+      const dot=$("#fb-dot"),txt=$("#fb-text");
+      const data=await fbFetch(name);
+      if(data!==null){
+        dot.className="dot green";txt.textContent="Đã đồng bộ";
+        tasks=Object.fromEntries(Object.entries(data||{}).filter(([k])=>k!=="_categories"&&k!=="_routines"));
+        saveToLocal();
+        renderTasks();
+        renderHistory("week");
+        updateCharts("week");
+      }else{
+        dot.className="dot red";txt.textContent="Mất kết nối";
+      }
+    }
+    poll();
+    pollTimer=setInterval(poll,5000);
   }
 
   function saveTask(id,task){
     if(!me) return;
-    TRACKER_REF.child(me).child(id).set(task);
+    tasks[id]=task;
+    saveToLocal();
+    fbFetch(me+"/"+id,"PUT",task);
   }
 
   function deleteTask(id){
     if(!me) return;
-    TRACKER_REF.child(me).child(id).remove();
+    delete tasks[id];
+    saveToLocal();
+    fbFetch(me+"/"+id,"DELETE");
   }
 
   function getDayTasks(date){
@@ -840,14 +856,8 @@ button.danger:hover{background:var(--danger);color:#fff}
     if(!name) return;
     me=name.trim();
     localStorage.setItem("dt_me",me);
-    if(window.personRef) window.personRef.off();
-    window.personRef=TRACKER_REF.child(me);
-    window.personRef.on("value",snap=>{
-      tasks=snap.val()||{};
-      renderTasks();
-      renderHistory("week");
-      updateCharts("week");
-    });
+    loadFromLocal();
+    startPolling(me);
     $("#me").value=me;
     $("#who").textContent="👤 "+me;
   }
@@ -918,12 +928,13 @@ button.danger:hover{background:var(--danger);color:#fff}
   });
 
   // Known users
-  TRACKER_REF.on("value",snap=>{
-    const data=snap.val()||{};
+  fbFetch("","GET").then(data=>{
+    if(!data) return;
     const names=Object.keys(data).filter(k=>!k.startsWith("_"));
-    const dl=$("#known-users");dl.innerHTML="";
+    const dl=$("#known-users");if(!dl)return;
+    dl.innerHTML="";
     names.forEach(n=>{const o=document.createElement("option");o.value=n;dl.appendChild(o)});
-  });
+  }).catch(()=>{});
 
   // Auto-load
   if(me){$("#me").value=me;initUser(me)}
