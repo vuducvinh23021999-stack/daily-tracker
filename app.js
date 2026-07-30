@@ -1,6 +1,5 @@
-
+document.getElementById("fb-text").textContent = "ALIVE";
 try{
-document.getElementById("fb-text").textContent="ALIVE";
 (function(){
   const CATEGORIES = [
     {id:"work",label:"Công việc",color:"#e53935"},
@@ -29,8 +28,8 @@ document.getElementById("fb-text").textContent="ALIVE";
       .catch(e=>{
         clearTimeout(timer);
         console.error("fbFetch error:",e.message,url);
-        const dt=$("#fb-dot"),txt=$("#fb-text");
-        if(dt){dt.className="dot red";txt.textContent=e.name==="AbortError"?"Hết thời gian chờ":e.message.slice(0,40)}
+        const dt=document.getElementById("fb-dot"),tx=document.getElementById("fb-text");
+        if(dt){dt.className="dot red";tx.textContent=e.name==="AbortError"?"Hết thời gian chờ":e.message.slice(0,40)}
         return null
       });
   }
@@ -58,14 +57,13 @@ document.getElementById("fb-text").textContent="ALIVE";
   let currentDate = today();
   let rateChart=null, dailyChart=null, catChart=null;
 
-  // Firebase connection
   let pollTimer=null;
   function startPolling(name){
     if(pollTimer) clearInterval(pollTimer);
     if(!name) return;
     async function poll(){
       try{
-        const dot=$("#fb-dot"),txt=$("#fb-text");
+        const dot=document.getElementById("fb-dot"),txt=document.getElementById("fb-text");
         const data=await fbFetch(name);
         if(data!==null){
           dot.className="dot green";txt.textContent="Đã đồng bộ";
@@ -90,7 +88,6 @@ document.getElementById("fb-text").textContent="ALIVE";
     saveToLocal();
     fbFetch(me+"/"+id,"PUT",task);
   }
-
   function deleteTask(id){
     if(!me) return;
     delete tasks[id];
@@ -142,13 +139,13 @@ document.getElementById("fb-text").textContent="ALIVE";
 
   function renderStats(){
     const total=getTotal(currentDate),done=getDone(currentDate),pending=getPending(currentDate),rate=getRate(currentDate),streak=getStreak();
-    $("#stat-total").textContent=total;
-    $("#stat-done").textContent=done;
-    $("#stat-pending").textContent=pending;
-    $("#stat-rate").textContent=rate+"%";
-    $("#stat-streak").textContent=streak;
-    $("#progress-bar").style.width=rate+"%";
-    const cv=$("#mini-chart");
+    document.getElementById("stat-total").textContent=total;
+    document.getElementById("stat-done").textContent=done;
+    document.getElementById("stat-pending").textContent=pending;
+    document.getElementById("stat-rate").textContent=rate+"%";
+    document.getElementById("stat-streak").textContent=streak;
+    document.getElementById("progress-bar").style.width=rate+"%";
+    const cv=document.getElementById("mini-chart");
     if(cv){
       const ctx=cv.getContext("2d");
       const w=cv.width,h=cv.height,cx=w/2,cy=h/2,r=22;
@@ -164,15 +161,13 @@ document.getElementById("fb-text").textContent="ALIVE";
   function renderTasks(){
     const dt=currentDate;
     const dayTasks=getDayTasks(dt);
-    const host=$("#task-list");
+    const host=document.getElementById("task-list");
     host.innerHTML="";
-
     if(dayTasks.length===0){
       host.innerHTML='<div class="empty-state"><div class="icon">✅</div><p>Chưa có công việc nào hôm nay</p></div>';
       renderStats();
       return;
     }
-
     const grouped={};
     CATEGORIES.forEach(c=>grouped[c.id]=[]);
     dayTasks.forEach(([id,t])=>{
@@ -180,7 +175,6 @@ document.getElementById("fb-text").textContent="ALIVE";
       if(!grouped[cat]) grouped[cat]=[];
       grouped[cat].push([id,t]);
     });
-
     const sortedCats=CATEGORIES.filter(c=>grouped[c.id]&&grouped[c.id].length>0);
     sortedCats.forEach(c=>{
       const items=grouped[c.id];
@@ -188,7 +182,6 @@ document.getElementById("fb-text").textContent="ALIVE";
       const section=document.createElement("div");section.className="cat-section";
       section.innerHTML=`<div class="cat-header" style="border-left:3px solid ${c.color}"><span>${c.label}</span><span class="cat-count">${doneCount}/${items.length}</span></div>`;
       host.appendChild(section);
-
       items.forEach(([id,task])=>{
         const p=task.priority||"medium";
         const pr=PRIORITIES[p];
@@ -232,7 +225,6 @@ document.getElementById("fb-text").textContent="ALIVE";
     renderStats();
   }
 
-  // Edit modal
   function editTask(id,task){
     const ov=document.createElement("div");ov.className="modal-overlay";
     ov.style.alignItems="flex-start";ov.style.paddingTop="60px";
@@ -250,9 +242,9 @@ document.getElementById("fb-text").textContent="ALIVE";
         <div class="row" style="margin-top:8px">
           <select id="edit-cat">${catOpts}</select>
           <select id="edit-priority">
-            <option value="high" ${task.priority==="high"?"selected":""}>🔴 Cao</option>
-            <option value="medium" ${task.priority==="medium"||!task.priority?"selected":""}>🟡 TB</option>
-            <option value="low" ${task.priority==="low"?"selected":""}>🟢 Thấp</option>
+            <option value="high" ${task.priority==="high"?"selected":""}>Cao</option>
+            <option value="medium" ${task.priority==="medium"||!task.priority?"selected":""}>TB</option>
+            <option value="low" ${task.priority==="low"?"selected":""}>Thấp</option>
           </select>
           <select id="edit-status">
             <option value="false" ${!task.done?"selected":""}>Chưa xong</option>
@@ -278,7 +270,6 @@ document.getElementById("fb-text").textContent="ALIVE";
     ov.addEventListener("click",e=>{if(e.target===ov) ov.remove()});
   }
 
-  // Alert system
   let audioCtx=null;
   function initAudio(){
     if(audioCtx) return;
@@ -300,7 +291,6 @@ document.getElementById("fb-text").textContent="ALIVE";
     }catch(e){}
   }
   function getAlertKey(){return "dt_alert_"+currentDate}
-
   function startBurstAlert(){
     let roundCounter=0;
     const maxRounds=3;
@@ -319,7 +309,6 @@ document.getElementById("fb-text").textContent="ALIVE";
     burstInterval=setTimeout(playBurst,1000);
     setTimeout(stopBurst,60*1000+1000);
   }
-
   function checkOverdueTasks(){
     if(!me) return;
     const alerted=localStorage.getItem(getAlertKey());
@@ -362,9 +351,9 @@ document.getElementById("fb-text").textContent="ALIVE";
           <input type="time" id="bulk-time" style="min-width:100px;flex:0.5">
           <select id="bulk-cat">${catOpts}</select>
           <select id="bulk-priority">
-            <option value="high">🔴 Cao</option>
-            <option value="medium" selected>🟡 Trung bình</option>
-            <option value="low">🟢 Thấp</option>
+            <option value="high">Cao</option>
+            <option value="medium" selected>Trung bình</option>
+            <option value="low">Thấp</option>
           </select>
           <select id="bulk-status">
             <option value="false" selected>Chưa xong</option>
@@ -405,7 +394,7 @@ document.getElementById("fb-text").textContent="ALIVE";
 
   function renderHistory(period){
     const data=getHistory(period);
-    const host=$("#history-list");
+    const host=document.getElementById("history-list");
     if(!host) return;
     let html='<table class="history-table"><thead><tr><th>Ngày</th><th>Tổng</th><th>Đã làm</th><th>Tỉ lệ</th></tr></thead><tbody>';
     data.forEach(d=>{
@@ -424,62 +413,22 @@ document.getElementById("fb-text").textContent="ALIVE";
     const rates=data.map(d=>d.rate);
     const totals=data.map(d=>d.total);
     const dones=data.map(d=>d.done);
-
-    const chartOpts={
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false}
-      },
-      scales:{
-        y:{beginAtZero:true,max:100,grid:{color:"rgba(0,0,0,.05)"}},
-        x:{grid:{display:false}}
-      }
-    };
-
+    const chartOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100,grid:{color:"rgba(0,0,0,.05)"}},x:{grid:{display:false}}}};
     if(rateChart) rateChart.destroy();
-    rateChart=new Chart($("#rate-chart"),{
-      type:"bar",
-      data:{labels,datasets:[{
-        label:"Tỉ lệ %",
-        data:rates,
-        backgroundColor:rates.map(v=>v>=80?"rgba(46,125,50,.7)":v>=50?"rgba(245,127,23,.7)":"rgba(183,28,28,.7)"),
-        borderRadius:4
-      }]},
-      options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:false}}}
-    });
-
+    rateChart=new Chart(document.getElementById("rate-chart"),{type:"bar",data:{labels,datasets:[{label:"Tỉ lệ %",data:rates,backgroundColor:rates.map(v=>v>=80?"rgba(46,125,50,.7)":v>=50?"rgba(245,127,23,.7)":"rgba(183,28,28,.7)"),borderRadius:4}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:false}}}});
     if(dailyChart) dailyChart.destroy();
-    dailyChart=new Chart($("#daily-chart"),{
-      type:"line",
-      data:{labels,datasets:[
-        {label:"Đã làm",data:dones,borderColor:"#2e7d32",backgroundColor:"rgba(46,125,50,.1)",fill:true,tension:.3,pointRadius:3},
-        {label:"Tổng",data:totals,borderColor:"#b25a3a",backgroundColor:"rgba(178,90,58,.1)",fill:true,tension:.3,pointRadius:3,borderDash:[5,5]}
-      ]},
-      options:{...chartOpts,plugins:{legend:{display:true,position:"top"}},scales:{y:{beginAtZero:true,grid:{color:"rgba(0,0,0,.05)"}},x:{grid:{display:false}}}}
-    });
-
+    dailyChart=new Chart(document.getElementById("daily-chart"),{type:"line",data:{labels,datasets:[{label:"Đã làm",data:dones,borderColor:"#2e7d32",backgroundColor:"rgba(46,125,50,.1)",fill:true,tension:.3,pointRadius:3},{label:"Tổng",data:totals,borderColor:"#b25a3a",backgroundColor:"rgba(178,90,58,.1)",fill:true,tension:.3,pointRadius:3,borderDash:[5,5]}]},options:{...chartOpts,plugins:{legend:{display:true,position:"top"}},scales:{y:{beginAtZero:true,grid:{color:"rgba(0,0,0,.05)"}},x:{grid:{display:false}}}}});
     const catData=getCatData(currentDate);
     if(catChart) catChart.destroy();
     const catLabels=[],catValues=[],catColors=[];
-    CATEGORIES.forEach(c=>{
-      if(catData[c.id]&&catData[c.id].total>0){
-        catLabels.push(c.label);
-        catValues.push(Math.round(catData[c.id].done/catData[c.id].total*100)||0);
-        catColors.push(c.color+"80");
-      }
-    });
-    catChart=new Chart($("#cat-chart"),{
-      type:"doughnut",
-      data:{labels:catLabels,datasets:[{data:catValues.map(v=>v||1),backgroundColor:catColors}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}
-    });
+    CATEGORIES.forEach(c=>{if(catData[c.id]&&catData[c.id].total>0){catLabels.push(c.label);catValues.push(Math.round(catData[c.id].done/catData[c.id].total*100)||0);catColors.push(c.color+"80")}});
+    catChart=new Chart(document.getElementById("cat-chart"),{type:"doughnut",data:{labels:catLabels,datasets:[{data:catValues.map(v=>v||1),backgroundColor:catColors}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}});
   }catch(e){console.error("updateCharts error:",e)}
   }
 
   function setDate(date){
     currentDate=date;
-    $("#date-display").textContent=fmtDate(date);
+    document.getElementById("date-display").textContent=fmtDate(date);
     renderTasks();
     renderHistory("week");
     updateCharts("week");
@@ -491,8 +440,8 @@ document.getElementById("fb-text").textContent="ALIVE";
     localStorage.setItem("dt_me",me);
     loadFromLocal();
     startPolling(me);
-    $("#me").value=me;
-    $("#who").textContent="👤 "+me;
+    document.getElementById("me").value=me;
+    document.getElementById("who").textContent="👤 "+me;
   }
 
   function exportCSV(){
@@ -506,7 +455,6 @@ document.getElementById("fb-text").textContent="ALIVE";
     const blob=new Blob([bom+csv],{type:"text/csv;charset=utf-8;charset=utf-8"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-"+currentDate+".csv";a.click();
   }
-
   function exportWord(){
     const items=getDayTasks(currentDate);
     let html=`<html><meta charset="utf-8"><body><h2>Công việc ngày ${fmtDate(currentDate)}</h2><table border="1" cellpadding="6" style="border-collapse:collapse;font-family:sans-serif"><tr><th>STT</th><th>Công việc</th><th>Danh mục</th><th>Giờ</th><th>Trạng thái</th></tr>`;
@@ -519,46 +467,35 @@ document.getElementById("fb-text").textContent="ALIVE";
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-"+currentDate+".doc";a.click();
   }
 
-  // Events
-  $("#save-me").addEventListener("click",()=>{initAudio();initUser($("#me").value)});
-  $("#me").addEventListener("keydown",e=>{if(e.key==="Enter"){initAudio();initUser($("#me").value)}});
-  $("#add-task").addEventListener("click",()=>{
-    addTask($("#task-input").value,$("#cat-select").value,$("#priority-select").value,currentDate,$("#task-time").value||null);
-    $("#task-input").value="";$("#task-time").value="";
+  document.getElementById("save-me").addEventListener("click",()=>{initAudio();initUser(document.getElementById("me").value)});
+  document.getElementById("me").addEventListener("keydown",e=>{if(e.key==="Enter"){initAudio();initUser(document.getElementById("me").value)}});
+  document.getElementById("add-task").addEventListener("click",()=>{
+    addTask(document.getElementById("task-input").value,document.getElementById("cat-select").value,document.getElementById("priority-select").value,currentDate,document.getElementById("task-time").value||null);
+    document.getElementById("task-input").value="";document.getElementById("task-time").value="";
   });
-  $("#task-input").addEventListener("keydown",e=>{if(e.key==="Enter"){$("#add-task").click()}});
-  $("#add-bulk").addEventListener("click",()=>{initAudio();bulkAdd()});
-  $("#prev-day").addEventListener("click",()=>{
-    const d=new Date(currentDate+"T12:00:00");d.setDate(d.getDate()-1);setDate(d.toISOString().slice(0,10));
-  });
-  $("#next-day").addEventListener("click",()=>{
-    const d=new Date(currentDate+"T12:00:00");d.setDate(d.getDate()+1);setDate(d.toISOString().slice(0,10));
-  });
-  $("#today-btn").addEventListener("click",()=>setDate(today()));
-  $("#clear-done").addEventListener("click",()=>{
-    getDayTasks(currentDate).filter(([_,t])=>t.done).forEach(([id])=>deleteTask(id));renderTasks();
-  });
-  $("#export-today").addEventListener("click",()=>{
+  document.getElementById("task-input").addEventListener("keydown",e=>{if(e.key==="Enter"){document.getElementById("add-task").click()}});
+  document.getElementById("add-bulk").addEventListener("click",()=>{initAudio();bulkAdd()});
+  document.getElementById("prev-day").addEventListener("click",()=>{const d=new Date(currentDate+"T12:00:00");d.setDate(d.getDate()-1);setDate(d.toISOString().slice(0,10))});
+  document.getElementById("next-day").addEventListener("click",()=>{const d=new Date(currentDate+"T12:00:00");d.setDate(d.getDate()+1);setDate(d.toISOString().slice(0,10))});
+  document.getElementById("today-btn").addEventListener("click",()=>setDate(today()));
+  document.getElementById("clear-done").addEventListener("click",()=>{getDayTasks(currentDate).filter(([_,t])=>t.done).forEach(([id])=>deleteTask(id));renderTasks()});
+  document.getElementById("export-today").addEventListener("click",()=>{
     const dt=currentDate;const items=getDayTasks(dt);
     let txt=`Công việc ngày ${fmtDate(dt)}\n${"=".repeat(40)}\n\n`;
-    items.forEach(([_,t])=>{
-      const st=t.done?"✓":"○";
-      txt+=`${st} ${t.title} (${CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Khác"})\n`;
-    });
+    items.forEach(([_,t])=>{const st=t.done?"✓":"○";txt+=`${st} ${t.title} (${CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Khác"})\n`});
     txt+=`\n${getCompleted(dt)}/${getTotal(dt)} hoàn thành`;
     const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-"+dt+".txt";a.click();
   });
-  $("#export-excel").addEventListener("click",exportCSV);
-  $("#export-word").addEventListener("click",exportWord);
+  document.getElementById("export-excel").addEventListener("click",exportCSV);
+  document.getElementById("export-word").addEventListener("click",exportWord);
   setInterval(checkOverdueTasks,5000);
 
-  // Tabs
-  $$(".tabs button").forEach(btn=>{
+  Array.from(document.querySelectorAll(".tabs button")).forEach(btn=>{
     btn.addEventListener("click",()=>{
-      $$(".tabs button").forEach(b=>b.classList.remove("active"));
+      Array.from(document.querySelectorAll(".tabs button")).forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
-      $$(".tab-content").forEach(t=>t.classList.remove("active"));
+      Array.from(document.querySelectorAll(".tab-content")).forEach(t=>t.classList.remove("active"));
       const tab=document.getElementById("tab-"+btn.dataset.tab);
       if(tab) tab.classList.add("active");
       if(btn.dataset.tab==="stats")updateCharts(document.querySelector(".period-select .active")?.dataset?.period||"week");
@@ -566,26 +503,23 @@ document.getElementById("fb-text").textContent="ALIVE";
     });
   });
 
-  // Period select
-  $$(".period-select button").forEach(btn=>{
+  Array.from(document.querySelectorAll(".period-select button")).forEach(btn=>{
     btn.addEventListener("click",()=>{
-      $$(".period-select button").forEach(b=>b.classList.remove("active"));
+      Array.from(document.querySelectorAll(".period-select button")).forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
       updateCharts(btn.dataset.period);
     });
   });
 
-  // Known users
   fbFetch("","GET").then(data=>{
     if(!data) return;
     const names=Object.keys(data).filter(k=>!k.startsWith("_"));
-    const dl=$("#known-users");if(!dl)return;
+    const dl=document.getElementById("known-users");if(!dl)return;
     dl.innerHTML="";
     names.forEach(n=>{const o=document.createElement("option");o.value=n;dl.appendChild(o)});
   }).catch(()=>{});
 
-  // Auto-load
-  if(me){$("#me").value=me;initUser(me)}
-  else{$("#who").textContent="Chưa đặt tên"}
+  if(me){document.getElementById("me").value=me;initUser(me)}
+  else{document.getElementById("who").textContent="Chưa đặt tên"}
   setDate(today());
-})();}catch(e){console.error("App error:",e)}
+})();}catch(e){console.error("App error:",e);document.getElementById("fb-text").textContent="ERROR: "+e.message}
