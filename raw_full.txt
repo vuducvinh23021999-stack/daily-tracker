@@ -1,4 +1,233 @@
-﻿
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daily Tracker - Quản lý công việc hàng ngày</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0ebe3;
+  --surface:#fff;
+  --surface2:#f8f5f0;
+  --text:#1f1d1a;
+  --text2:#6b6358;
+  --border:#e0d8c6;
+  --primary:#b25a3a;
+  --primary-light:#e89a7a;
+  --primary-dark:#8a3e22;
+  --success:#2e7d32;
+  --danger:#b71c1c;
+  --warning:#f57f17;
+  --shadow:0 2px 8px rgba(0,0,0,.06);
+  --radius:12px;
+  --radius-sm:8px;
+  font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh}
+.app{max-width:960px;margin:0 auto;padding:20px 16px 100px}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.header h1{font-size:22px;font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.header h1 span{font-size:26px}
+.header-right{display:flex;align-items:center;gap:10px}
+
+.date-nav{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.date-nav button{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 12px;cursor:pointer;font-size:13px;color:var(--text)}
+.date-nav .date-display{font-weight:600;font-size:15px;min-width:160px;text-align:center}
+
+/* Stats bar */
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:16px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center}
+.stat-card .num{font-size:24px;font-weight:700;color:var(--primary)}
+.stat-card .num.green{color:var(--success)}
+.stat-card .num.red{color:var(--danger)}
+.stat-card .label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+
+/* Progress bar */
+.progress-wrap{background:var(--border);border-radius:999px;height:8px;overflow:hidden;margin-bottom:16px}
+.progress-bar{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--success),#66bb6a);transition:width .4s ease}
+
+/* Add task */
+.add-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.add-section .row{display:flex;flex-wrap:wrap;gap:8px}
+.add-section .row>*{flex:1;min-width:120px}
+.add-section input,.add-section select{padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font:inherit;font-size:14px;color:var(--text);width:100%}
+.add-section .add-btn-row{display:flex;gap:8px;margin-top:8px}
+.add-section .add-btn-row button{flex:1}
+
+button{cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:10px 16px;border-radius:var(--radius-sm);font:inherit;font-size:13px;font-weight:500;transition:all .15s}
+button:hover{opacity:.85}
+button.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+button.primary:hover{background:var(--primary-dark)}
+button.small{padding:6px 10px;font-size:12px}
+button.danger{color:var(--danger);border-color:var(--danger)}
+button.danger:hover{background:var(--danger);color:#fff}
+
+/* Task list */
+.task-list{display:grid;gap:6px;margin-bottom:16px}
+.category-header{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;padding:12px 4px 4px;display:flex;align-items:center;gap:6px}
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s}
+.task-card:hover{box-shadow:var(--shadow)}
+.task-card .check-wrap{flex-shrink:0;width:24px;height:24px;border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
+.task-card .check-wrap.done{background:var(--success);border-color:var(--success)}
+.task-card .check-wrap.done::after{content:"✓";color:#fff;font-size:14px;font-weight:700}
+.task-card .task-body{flex:1;min-width:0}
+.task-card .task-title{font-size:14px;font-weight:500}
+.task-card .task-title.done{text-decoration:line-through;color:var(--text2)}
+.task-card .task-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.task-card .time-badge{font-size:11px;padding:2px 6px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--text2)}
+.task-card.overdue{border-color:var(--danger);background:#fff5f5}
+.task-card.overdue .time-badge{border-color:var(--danger);color:var(--danger);background:#ffe0e0}
+.task-card .cat-badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500}
+.task-card .priority-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.task-card .task-actions{display:flex;gap:4px;flex-shrink:0}
+.task-card .time{font-size:11px;color:var(--text2)}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px}
+.tabs button{flex:1;border:none;background:transparent;padding:10px;border-radius:var(--radius-sm);font-weight:500;font-size:13px}
+.tabs button.active{background:var(--primary);color:#fff}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* History & Stats */
+.stats-grid{display:grid;gap:16px}
+.chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.chart-wrap h3{font-size:14px;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+.chart-wrap canvas{max-height:250px}
+.period-select{display:flex;gap:4px;margin-bottom:12px}
+.period-select button{flex:1;padding:6px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent}
+.period-select button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal{background:var(--surface);border-radius:var(--radius);padding:24px;width:90%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+.modal h3{font-size:16px;margin-bottom:16px}
+.modal label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px;margin-top:12px}
+.modal input,.modal select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font:inherit;font-size:14px;background:var(--surface2);color:var(--text);box-sizing:border-box}
+.modal .modal-actions{display:flex;gap:8px;margin-top:20px}
+.modal .modal-actions button{flex:1}
+
+.history-list .day-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
+.history-list .day-group .day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.history-list .day-group .day-head .date{font-weight:600;font-size:14px}
+.history-list .day-group .day-head .rate{font-size:13px;color:var(--text2)}
+.history-list .day-group .h-task{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px}
+.history-list .day-group .h-task .h-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+
+/* User bar */
+.user-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.user-bar .label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+.user-bar input{flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font:inherit;font-size:13px}
+.user-bar button{padding:8px 14px}
+.online-status{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text2)}
+.online-status .dot{width:8px;height:8px;border-radius:50%}
+.online-status .dot.green{background:var(--success)}
+.online-status .dot.red{background:var(--danger)}
+
+.empty-state{text-align:center;padding:40px 16px;color:var(--text2)}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+.empty-state p{font-size:14px}
+
+@media(max-width:640px){
+  .header h1{font-size:18px}
+  .add-section .row>*{min-width:100%}
+  .stats-bar{grid-template-columns:repeat(2,1fr)}
+}
+
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+.pop{animation:pop .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.task-card{animation:fadeIn .2s ease}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="header">
+  <h1><span>📋</span> Daily Tracker</h1>
+  <div class="header-right">
+    <span class="online-status"><span class="dot" id="fb-dot"></span><span id="fb-text">Đang kết nối…</span></span>
+  </div>
+</div>
+
+<div class="user-bar">
+  <span class="label">Người dùng</span>
+  <input type="text" id="me" placeholder="Gõ tên rồi Enter…" list="known-users">
+  <datalist id="known-users"></datalist>
+  <button id="save-me" class="primary">Lưu tên</button>
+  <span id="who" style="font-size:13px;color:var(--text2)">Chưa đặt tên</span>
+</div>
+
+<div class="date-nav">
+  <button id="prev-day">‹</button>
+  <span class="date-display" id="date-display"></span>
+  <button id="next-day">›</button>
+  <button id="today-btn">Hôm nay</button>
+</div>
+
+<div class="stats-bar" id="stats-bar">
+  <div class="stat-card"><div class="num" id="stat-total">0</div><div class="label">Tổng</div></div>
+  <div class="stat-card"><div class="num green" id="stat-done">0</div><div class="label">Đã làm</div></div>
+  <div class="stat-card"><div class="num red" id="stat-pending">0</div><div class="label">Còn lại</div></div>
+  <div class="stat-card"><div class="num" id="stat-rate">0%</div><div class="label">Tỉ lệ</div></div>
+  <div class="stat-card"><div class="num" id="stat-streak">0</div><div class="label">Streak</div></div>
+  <div class="stat-card"><canvas id="mini-chart" width="60" height="60" style="width:50px;height:50px;margin:0 auto;display:block"></canvas><div class="label" style="margin-top:-4px">Hôm nay</div></div>
+</div>
+
+<div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+
+<div class="add-section">
+  <div class="row">
+    <input type="text" id="task-input" placeholder="Thêm công việc…">
+    <input type="time" id="task-time" style="min-width:100px;flex:0.5">
+    <select id="cat-select"><option value="work">💼 Công việc</option><option value="study">📚 Học tập</option><option value="health">🏃 Sức khỏe</option><option value="personal">🧘 Cá nhân</option><option value="finance">💰 Tài chính</option><option value="other">📌 Khác</option></select>
+    <select id="priority-select"><option value="high">🔴 Cao</option><option value="medium" selected>🟡 Trung bình</option><option value="low">🟢 Thấp</option></select>
+  </div>
+  <div class="add-btn-row">
+    <button id="add-task" class="primary">+ Thêm</button>
+    <button id="add-bulk">📝 Thêm nhiều</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="active" data-tab="today">Hôm nay</button>
+  <button data-tab="history">Lịch sử</button>
+  <button data-tab="stats">Thống kê</button>
+</div>
+
+<div class="tab-content active" id="tab-today">
+  <div id="task-list" class="task-list"></div>
+  <div style="display:flex;gap:4px;margin-top:8px">
+    <button id="clear-done" class="small danger">Xoá mục đã hoàn thành</button>
+    <button id="export-today" class="small">Xuất TXT</button>
+    <button id="export-excel" class="small">📊 Xuất Excel</button>
+    <button id="export-word" class="small">📝 Xuất Word</button>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-history">
+  <div class="history-list" id="history-list"></div>
+</div>
+
+<div class="tab-content" id="tab-stats">
+  <div class="period-select">
+    <button data-period="week" class="active">Tuần</button>
+    <button data-period="month">Tháng</button>
+    <button data-period="year">Năm</button>
+    <button data-period="all">Tất cả</button>
+  </div>
+  <div class="stats-grid">
+    <div class="chart-wrap"><h3>📊 Tỉ lệ hoàn thành</h3><canvas id="rate-chart"></canvas></div>
+    <div class="chart-wrap"><h3>📈 Số task theo ngày</h3><canvas id="daily-chart"></canvas></div>
+    <div class="chart-wrap"><h3>🎯 Theo danh mục</h3><canvas id="cat-chart"></canvas></div>
+  </div>
+</div>
+
+</div>
+
+<script>
 try{(function(){
   const CATEGORIES = [
     {id:"work",label:"💼 Công việc",color:"#e53935"},
@@ -733,3 +962,6 @@ try{(function(){
   else{$("#who").textContent="Chưa đặt tên"}
   setDate(today());
 })();}catch(e){console.error("App error:",e)}
+</script>
+</body>
+</html>
