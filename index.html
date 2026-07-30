@@ -250,7 +250,12 @@ try{(function(){
         if(!text) return null;
         try{return JSON.parse(text)}catch(e){throw new Error("JSON parse error: "+text.slice(0,200))}
       })
-      .catch(e=>{console.error("fbFetch error:",e.message,url);return null});
+      .catch(e=>{
+        console.error("fbFetch error:",e.message,url);
+        const dt=$("#fb-dot"),txt=$("#fb-text");
+        if(dt){dt.className="dot red";txt.textContent=e.message.slice(0,40)}
+        return null
+      });
   }
 
   function saveToLocal(){
