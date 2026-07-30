@@ -14,23 +14,23 @@ try{(function(){
   function fbFetch(path,method,body){
     const enc=path?path.split("/").map(s=>encodeURIComponent(s)).join("/"):"";
     const url=FB_BASE+"/daily-tracker/"+enc+".json";
-    const ctrl=new AbortController();
-    const timer=setTimeout(()=>ctrl.abort(),8000);
-    return fetch(url,method?{method,signal:ctrl.signal,body:body?JSON.stringify(body):void 0,headers:{"Content-Type":"application/json"}}:{signal:ctrl.signal})
-      .then(async r=>{
-        clearTimeout(timer);
-        if(!r.ok) throw new Error(r.status+" "+r.statusText);
-        const text=await r.text();
-        if(!text) return null;
-        try{return JSON.parse(text)}catch(e){throw new Error("JSON parse: "+text.slice(0,200))}
-      })
-      .catch(e=>{
-        clearTimeout(timer);
-        console.error("fbFetch error:",e.message,url);
-        const dt=$("#fb-dot"),txt=$("#fb-text");
-        if(dt){dt.className="dot red";txt.textContent=e.name==="AbortError"?"Hết thời gian chờ":e.message.slice(0,40)}
-        return null
+    // JSONP for GET (bypasses CORS), fetch for write
+    if(!method||method==="GET"){
+      return new Promise(resolve=>{
+        const id="cb_"+Date.now();
+        window[id]=data=>{resolve(data);cleanup()};
+        const s=document.createElement("script");
+        s.src=url+"?callback="+id+"&t="+Date.now();
+        const cleanup=()=>{delete window[id];if(s.parentNode)s.parentNode.removeChild(s)};
+        s.onerror=()=>{cleanup();resolve(null)};
+        s.onload=()=>{if(window[id]){cleanup();resolve(null)}};
+        document.body.appendChild(s);
+        setTimeout(()=>{if(window[id]){cleanup();resolve(null)}},8000);
       });
+    }
+    return fetch(url,{method,body:body?JSON.stringify(body):void 0,headers:{"Content-Type":"application/json"}})
+      .then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})
+      .catch(e=>{console.error("fbFetch write error:",e.message,url);return null});
   }
 
   function saveToLocal(){
