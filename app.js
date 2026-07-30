@@ -1,36 +1,34 @@
-﻿
-try{(function(){
+﻿try{(function(){
   const CATEGORIES = [
-    {id:"work",label:"💼 Công việc",color:"#e53935"},
-    {id:"study",label:"📚 Học tập",color:"#1e88e5"},
-    {id:"health",label:"🏃 Sức khỏe",color:"#43a047"},
-    {id:"personal",label:"🧘 Cá nhân",color:"#fb8c00"},
-    {id:"finance",label:"💰 Tài chính",color:"#8e24aa"},
-    {id:"other",label:"📌 Khác",color:"#757575"}
+    {id:"work",label:"≡ƒÆ╝ C├┤ng viß╗çc",color:"#e53935"},
+    {id:"study",label:"≡ƒôÜ Hß╗ìc tß║¡p",color:"#1e88e5"},
+    {id:"health",label:"≡ƒÅâ Sß╗⌐c khß╗Åe",color:"#43a047"},
+    {id:"personal",label:"≡ƒºÿ C├í nh├ón",color:"#fb8c00"},
+    {id:"finance",label:"≡ƒÆ░ T├ái ch├¡nh",color:"#8e24aa"},
+    {id:"other",label:"≡ƒôî Kh├íc",color:"#757575"}
   ];
-  const PRIORITIES = {high:{label:"🔴 Cao",color:"#e53935"},medium:{label:"🟡 TB",color:"#fb8c00"},low:{label:"🟢 Thấp",color:"#43a047"}};
+  const PRIORITIES = {high:{label:"≡ƒö┤ Cao",color:"#e53935"},medium:{label:"≡ƒƒí TB",color:"#fb8c00"},low:{label:"≡ƒƒó Thß║Ñp",color:"#43a047"}};
   const FB_BASE="https://hagiang-planner-default-rtdb.firebaseio.com";
 
-  function fbFetch(path,method,body){
+    function fbFetch(path,method,body){
     const enc=path?path.split("/").map(s=>encodeURIComponent(s)).join("/"):"";
     const url=FB_BASE+"/daily-tracker/"+enc+".json";
-    // JSONP for GET (bypasses CORS), fetch for write
     if(!method||method==="GET"){
-      return new Promise(resolve=>{
-        const id="cb_"+Date.now();
-        window[id]=data=>{resolve(data);cleanup()};
-        const s=document.createElement("script");
+      return new Promise(function(resolve){
+        var id="cb_"+Date.now();
+        window[id]=function(data){resolve(data);cleanup()};
+        var s=document.createElement("script");
         s.src=url+"?callback="+id+"&t="+Date.now();
-        const cleanup=()=>{delete window[id];if(s.parentNode)s.parentNode.removeChild(s)};
-        s.onerror=()=>{cleanup();resolve(null)};
-        s.onload=()=>{if(window[id]){cleanup();resolve(null)}};
+        function cleanup(){delete window[id];if(s.parentNode)s.parentNode.removeChild(s)}
+        s.onerror=function(){cleanup();resolve(null)};
+        s.onload=function(){if(window[id]){cleanup();resolve(null)}};
         document.body.appendChild(s);
-        setTimeout(()=>{if(window[id]){cleanup();resolve(null)}},8000);
+        setTimeout(function(){if(window[id]){cleanup();resolve(null)}},8000);
       });
     }
-    return fetch(url,{method,body:body?JSON.stringify(body):void 0,headers:{"Content-Type":"application/json"}})
-      .then(r=>{if(!r.ok)throw new Error(r.status);return r.json()})
-      .catch(e=>{console.error("fbFetch write error:",e.message,url);return null});
+    return fetch(url,{method:method,body:body?JSON.stringify(body):void 0,headers:{"Content-Type":"application/json"}})
+      .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
+      .catch(function(e){console.error("fbFetch write error:",e.message,url);return null});
   }
 
   function saveToLocal(){
@@ -66,14 +64,14 @@ try{(function(){
         const dot=$("#fb-dot"),txt=$("#fb-text");
         const data=await fbFetch(name);
         if(data!==null){
-          dot.className="dot green";txt.textContent="Đã đồng bộ";
+          dot.className="dot green";txt.textContent="─É├ú ─æß╗ông bß╗Ö";
           tasks=Object.fromEntries(Object.entries(data||{}).filter(([k])=>k!=="_categories"&&k!=="_routines"));
           saveToLocal();
           renderTasks();
           renderHistory("week");
           updateCharts("week");
         }else{
-          dot.className="dot red";txt.textContent="Mất kết nối";
+          dot.className="dot red";txt.textContent="Mß║Ñt kß║┐t nß╗æi";
           if(Object.keys(tasks).length===0&&loadFromLocal()){renderTasks();renderHistory("week")}
         }
       }catch(e){console.error("poll error:",e)}
@@ -290,7 +288,7 @@ try{(function(){
     host.innerHTML="";
 
     if(dayTasks.length===0){
-      host.innerHTML='<div class="empty-state"><div class="icon">✅</div><p>Chưa có công việc nào hôm nay</p></div>';
+      host.innerHTML='<div class="empty-state"><div class="icon">Γ£à</div><p>Ch╞░a c├│ c├┤ng viß╗çc n├áo h├┤m nay</p></div>';
       renderStats();
       return;
     }
@@ -328,8 +326,8 @@ try{(function(){
             </div>
           </div>
           <div class="task-actions">
-            <button class="small" onclick="window.dtEdit('${id}')" title="Sửa">✏️</button>
-            <button class="small danger" onclick="window.dtDel('${id}')" title="Xoá">🗑️</button>
+            <button class="small" onclick="window.dtEdit('${id}')" title="Sß╗¡a">Γ£Å∩╕Å</button>
+            <button class="small danger" onclick="window.dtDel('${id}')" title="Xo├í">≡ƒùæ∩╕Å</button>
           </div>
         `;
         card.querySelector(".check-wrap").addEventListener("click",()=>toggleTask(id));
@@ -364,12 +362,12 @@ try{(function(){
   }
   function exportCSV(){
     const data=getAllTasksFlat();
-    let csv="Ngày;Giờ;Công việc;Danh mục;Ưu tiên;Trạng thái\n";
+    let csv="Ng├áy;Giß╗¥;C├┤ng viß╗çc;Danh mß╗Ñc;╞»u ti├¬n;Trß║íng th├íi\n";
     data.forEach(({date,items})=>{
       items.forEach(t=>{
-        const cat=CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Khác";
+        const cat=CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Kh├íc";
         const pri=PRIORITIES[t.priority||"medium"]?.label||"TB";
-        const st=t.done?"Hoàn thành":"Chưa xong";
+        const st=t.done?"Ho├án th├ánh":"Ch╞░a xong";
         csv+=`${escCsv(date)};${escCsv(t.scheduledTime)};${escCsv(t.title)};${escCsv(cat)};${escCsv(pri)};${escCsv(st)}\n`;
       });
     });
@@ -387,24 +385,24 @@ try{(function(){
       .done{background:#e8f5e9}.pending{background:#fff3e0}
       .sum{margin-top:20px;font-size:14px;color:#666}
     </style></head><body>
-    <h1>📋 Daily Tracker - Báo cáo công việc</h1>
-    <p>Xuất ngày: ${new Date().toLocaleDateString("vi-VN")}</p>
+    <h1>≡ƒôï Daily Tracker - B├ío c├ío c├┤ng viß╗çc</h1>
+    <p>Xuß║Ñt ng├áy: ${new Date().toLocaleDateString("vi-VN")}</p>
     <hr>`;
     data.forEach(({date,items})=>{
       const total=items.length;
       const done=items.filter(t=>t.done).length;
-      html+=`<h2>${fmtDate(date)} (${done}/${total})</h2><table><tr><th>Giờ</th><th>Công việc</th><th>Danh mục</th><th>Ưu tiên</th><th>Trạng thái</th></tr>`;
+      html+=`<h2>${fmtDate(date)} (${done}/${total})</h2><table><tr><th>Giß╗¥</th><th>C├┤ng viß╗çc</th><th>Danh mß╗Ñc</th><th>╞»u ti├¬n</th><th>Trß║íng th├íi</th></tr>`;
       items.forEach(t=>{
-        const cat=CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Khác";
+        const cat=CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Kh├íc";
         const pri=PRIORITIES[t.priority||"medium"]?.label||"TB";
         const rowClass=t.done?"done":"pending";
-        html+=`<tr class="${rowClass}"><td>${t.scheduledTime||"-"}</td><td>${esc(t.title)}</td><td>${cat}</td><td>${pri}</td><td>${t.done?"✅ Hoàn thành":"⏳ Chưa xong"}</td></tr>`;
+        html+=`<tr class="${rowClass}"><td>${t.scheduledTime||"-"}</td><td>${esc(t.title)}</td><td>${cat}</td><td>${pri}</td><td>${t.done?"Γ£à Ho├án th├ánh":"ΓÅ│ Ch╞░a xong"}</td></tr>`;
       });
       html+=`</table>`;
     });
     const totalAll=Object.values(tasks).filter(t=>t.date).length;
     const doneAll=Object.values(tasks).filter(t=>t.date&&t.done).length;
-    html+=`<p class="sum">Tổng kết: ${doneAll}/${totalAll} công việc đã hoàn thành (${totalAll?Math.round(doneAll/totalAll*100):0}%)</p>`;
+    html+=`<p class="sum">Tß╗òng kß║┐t: ${doneAll}/${totalAll} c├┤ng viß╗çc ─æ├ú ho├án th├ánh (${totalAll?Math.round(doneAll/totalAll*100):0}%)</p>`;
     html+=`</body></html>`;
     const blob=new Blob([html],{type:"application/msword;charset=utf-8"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="daily-tracker.doc";a.click();
@@ -422,7 +420,7 @@ try{(function(){
   }
 
   window.dtDel=function(id){
-    if(!confirm("Xoá công việc này?")) return;
+    if(!confirm("Xo├í c├┤ng viß╗çc n├áy?")) return;
     deleteTask(id);
     renderTasks();
   };
@@ -435,29 +433,29 @@ try{(function(){
     const catOpts=CATEGORIES.map(c=>`<option value="${c.id}"${c.id===(t.category||"other")?" selected":""}>${c.label}</option>`).join("");
     ov.innerHTML=`
       <div class="modal">
-        <h3>✏️ Sửa công việc</h3>
-        <label>Tên công việc</label>
+        <h3>Γ£Å∩╕Å Sß╗¡a c├┤ng viß╗çc</h3>
+        <label>T├¬n c├┤ng viß╗çc</label>
         <input type="text" id="edit-title" value="${esc(t.title||"")}">
-        <label>Ngày</label>
+        <label>Ng├áy</label>
         <input type="date" id="edit-date" value="${t.date||""}">
-        <label>Giờ</label>
+        <label>Giß╗¥</label>
         <input type="time" id="edit-time" value="${t.scheduledTime||""}">
-        <label>Danh mục</label>
+        <label>Danh mß╗Ñc</label>
         <select id="edit-cat">${catOpts}</select>
-        <label>Mức độ</label>
+        <label>Mß╗⌐c ─æß╗Ö</label>
         <select id="edit-priority">
-          <option value="high"${t.priority==="high"?" selected":""}>🔴 Cao</option>
-          <option value="medium"${t.priority==="medium"?" selected":""}>🟡 Trung bình</option>
-          <option value="low"${t.priority==="low"?" selected":""}>🟢 Thấp</option>
+          <option value="high"${t.priority==="high"?" selected":""}>≡ƒö┤ Cao</option>
+          <option value="medium"${t.priority==="medium"?" selected":""}>≡ƒƒí Trung b├¼nh</option>
+          <option value="low"${t.priority==="low"?" selected":""}>≡ƒƒó Thß║Ñp</option>
         </select>
-        <label>Tình trạng</label>
+        <label>T├¼nh trß║íng</label>
         <select id="edit-status">
-          <option value="false"${t.done?"":" selected"}>Chưa xong</option>
-          <option value="true"${t.done?" selected":""}>Hoàn thành</option>
+          <option value="false"${t.done?"":" selected"}>Ch╞░a xong</option>
+          <option value="true"${t.done?" selected":""}>Ho├án th├ánh</option>
         </select>
         <div class="modal-actions">
-          <button id="edit-save" class="primary">Lưu</button>
-          <button id="edit-cancel">Huỷ</button>
+          <button id="edit-save" class="primary">L╞░u</button>
+          <button id="edit-cancel">Huß╗╖</button>
         </div>
       </div>`;
     document.body.appendChild(ov);
@@ -482,7 +480,7 @@ try{(function(){
   };
 
   function addTask(title,category,priority,date,scheduledTime){
-    if(!me) return alert("Nhập tên và bấm Lưu tên trước!");
+    if(!me) return alert("Nhß║¡p t├¬n v├á bß║Ñm L╞░u t├¬n tr╞░ß╗¢c!");
     if(!title.trim()) return;
     const id=genId();
     tasks[id]={title:title.trim(),category:category||"other",priority:priority||"medium",date:date||currentDate,createdAt:Date.now(),done:false,completedAt:null,scheduledTime:scheduledTime||null};
@@ -492,7 +490,7 @@ try{(function(){
   }
 
   function bulkAdd(){
-    if(!me) return alert("Nhập tên trước!");
+    if(!me) return alert("Nhß║¡p t├¬n tr╞░ß╗¢c!");
     const ov=document.createElement("div");
     ov.className="modal-overlay";
     ov.style.alignItems="flex-start";ov.style.paddingTop="60px";
@@ -500,24 +498,24 @@ try{(function(){
     ov.innerHTML=`
       <div class="add-section" style="width:90%;max-width:600px;margin:0 auto">
         <div class="row">
-          <textarea id="bulk-text" style="min-height:100px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font:inherit;font-size:14px;color:var(--text);width:100%;box-sizing:border-box;resize:vertical" placeholder="Mỗi dòng 1 công việc:&#10;Đi chợ&#10;Họp team | 14:00&#10;Tập gym | 14:00 | health"></textarea>
+          <textarea id="bulk-text" style="min-height:100px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);font:inherit;font-size:14px;color:var(--text);width:100%;box-sizing:border-box;resize:vertical" placeholder="Mß╗ùi d├▓ng 1 c├┤ng viß╗çc:&#10;─Éi chß╗ú&#10;Hß╗ìp team | 14:00&#10;Tß║¡p gym | 14:00 | health"></textarea>
         </div>
         <div class="row" style="margin-top:8px">
           <input type="time" id="bulk-time" style="min-width:100px;flex:0.5">
           <select id="bulk-cat">${catOpts}</select>
           <select id="bulk-priority">
-            <option value="high">🔴 Cao</option>
-            <option value="medium" selected>🟡 Trung bình</option>
-            <option value="low">🟢 Thấp</option>
+            <option value="high">≡ƒö┤ Cao</option>
+            <option value="medium" selected>≡ƒƒí Trung b├¼nh</option>
+            <option value="low">≡ƒƒó Thß║Ñp</option>
           </select>
           <select id="bulk-status">
-            <option value="false" selected>Chưa xong</option>
-            <option value="true">Hoàn thành</option>
+            <option value="false" selected>Ch╞░a xong</option>
+            <option value="true">Ho├án th├ánh</option>
           </select>
         </div>
         <div class="add-btn-row" style="margin-top:12px">
-          <button id="bulk-save" class="primary">+ Thêm tất cả</button>
-          <button id="bulk-cancel">Huỷ</button>
+          <button id="bulk-save" class="primary">+ Th├¬m tß║Ñt cß║ú</button>
+          <button id="bulk-cancel">Huß╗╖</button>
         </div>
       </div>`;
     document.body.appendChild(ov);
@@ -551,7 +549,7 @@ try{(function(){
   function renderHistory(period){
     const data=getHistory(period);
     const host=$("#history-list");
-    if(data.length===0){host.innerHTML='<div class="empty-state"><div class="icon">📜</div><p>Chưa có dữ liệu</p></div>';return}
+    if(data.length===0){host.innerHTML='<div class="empty-state"><div class="icon">≡ƒô£</div><p>Ch╞░a c├│ dß╗» liß╗çu</p></div>';return}
 
     host.innerHTML=data.slice().reverse().map(d=>{
       const pct=d.rate;
@@ -564,7 +562,7 @@ try{(function(){
         ${d.total>0?'<div style="background:var(--border);border-radius:999px;height:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:999px"></div></div>':''}
         <div style="margin-top:6px;font-size:12px;color:var(--text2)">
           ${getDayTasks(d.date).slice(0,5).map(([_,t])=>`<div class="h-task"><span class="h-dot" style="background:${t.done?'var(--success)':'var(--danger)'}"></span>${esc(t.title)}</div>`).join("")}
-          ${getDayTasks(d.date).length>5?`<div style="margin-top:4px;color:var(--text2)">…và ${getDayTasks(d.date).length-5} việc khác</div>`:""}
+          ${getDayTasks(d.date).length>5?`<div style="margin-top:4px;color:var(--text2)">ΓÇªv├á ${getDayTasks(d.date).length-5} viß╗çc kh├íc</div>`:""}
         </div>
       </div>`;
     }).join("");
@@ -597,7 +595,7 @@ try{(function(){
     rateChart=new Chart($("#rate-chart"),{
       type:"bar",
       data:{labels,datasets:[{
-        label:"Tỉ lệ %",
+        label:"Tß╗ë lß╗ç %",
         data:rates,
         backgroundColor:rates.map(v=>v>=80?"rgba(46,125,50,.7)":v>=50?"rgba(245,127,23,.7)":"rgba(183,28,28,.7)"),
         borderRadius:4
@@ -610,8 +608,8 @@ try{(function(){
     dailyChart=new Chart($("#daily-chart"),{
       type:"line",
       data:{labels,datasets:[
-        {label:"Đã làm",data:dones,borderColor:"#2e7d32",backgroundColor:"rgba(46,125,50,.1)",fill:true,tension:.3,pointRadius:3},
-        {label:"Tổng",data:totals,borderColor:"#b25a3a",backgroundColor:"rgba(178,90,58,.1)",fill:true,tension:.3,pointRadius:3,borderDash:[5,5]}
+        {label:"─É├ú l├ám",data:dones,borderColor:"#2e7d32",backgroundColor:"rgba(46,125,50,.1)",fill:true,tension:.3,pointRadius:3},
+        {label:"Tß╗òng",data:totals,borderColor:"#b25a3a",backgroundColor:"rgba(178,90,58,.1)",fill:true,tension:.3,pointRadius:3,borderDash:[5,5]}
       ]},
       options:{...chartOpts,plugins:{legend:{display:true,position:"top"}},scales:{y:{beginAtZero:true,grid:{color:"rgba(0,0,0,.05)"}},x:{grid:{display:false}}}}
     });
@@ -651,7 +649,7 @@ try{(function(){
     loadFromLocal();
     startPolling(me);
     $("#me").value=me;
-    $("#who").textContent="👤 "+me;
+    $("#who").textContent="≡ƒæñ "+me;
   }
 
   // Events
@@ -684,12 +682,12 @@ try{(function(){
   $("#export-today").addEventListener("click",()=>{
     const dt=currentDate;
     const items=getDayTasks(dt);
-    let txt=`Công việc ngày ${fmtDate(dt)}\n${"=".repeat(40)}\n\n`;
+    let txt=`C├┤ng viß╗çc ng├áy ${fmtDate(dt)}\n${"=".repeat(40)}\n\n`;
     items.forEach(([_,t])=>{
-      const st=t.done?"✓":"○";
-      txt+=`${st} ${t.title} (${CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Khác"})\n`;
+      const st=t.done?"Γ£ô":"Γùï";
+      txt+=`${st} ${t.title} (${CATEGORIES.find(c=>c.id===(t.category||"other"))?.label||"Kh├íc"})\n`;
     });
-    txt+=`\n${getCompleted(dt)}/${getTotal(dt)} hoàn thành`;
+    txt+=`\n${getCompleted(dt)}/${getTotal(dt)} ho├án th├ánh`;
     const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tasks-"+dt+".txt";a.click();
   });
@@ -730,6 +728,6 @@ try{(function(){
 
   // Auto-load
   if(me){$("#me").value=me;initUser(me)}
-  else{$("#who").textContent="Chưa đặt tên"}
+  else{$("#who").textContent="Ch╞░a ─æß║╖t t├¬n"}
   setDate(today());
 })();}catch(e){console.error("App error:",e)}

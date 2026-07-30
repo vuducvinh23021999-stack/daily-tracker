@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Daily Tracker - Quản lý công việc hàng ngày</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<title>Daily Tracker - Quß║ún l├╜ c├┤ng viß╗çc h├áng ng├áy</title>
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -73,7 +73,7 @@ button.danger:hover{background:var(--danger);color:#fff}
 .task-card:hover{box-shadow:var(--shadow)}
 .task-card .check-wrap{flex-shrink:0;width:24px;height:24px;border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s}
 .task-card .check-wrap.done{background:var(--success);border-color:var(--success)}
-.task-card .check-wrap.done::after{content:"✓";color:#fff;font-size:14px;font-weight:700}
+.task-card .check-wrap.done::after{content:"Γ£ô";color:#fff;font-size:14px;font-weight:700}
 .task-card .task-body{flex:1;min-width:0}
 .task-card .task-title{font-size:14px;font-weight:500}
 .task-card .task-title.done{text-decoration:line-through;color:var(--text2)}
@@ -146,64 +146,64 @@ button.danger:hover{background:var(--danger);color:#fff}
 <div class="app">
 
 <div class="header">
-  <h1><span>📋</span> Daily Tracker</h1>
+  <h1><span>≡ƒôï</span> Daily Tracker</h1>
   <div class="header-right">
-    <span class="online-status"><span class="dot" id="fb-dot"></span><span id="fb-text">Đang kết nối…</span></span>
+    <span class="online-status"><span class="dot" id="fb-dot"></span><span id="fb-text">─Éang kß║┐t nß╗æiΓÇª</span></span>
   </div>
 </div>
 
 <div class="user-bar">
-  <span class="label">Người dùng</span>
-  <input type="text" id="me" placeholder="Gõ tên rồi Enter…" list="known-users">
+  <span class="label">Ng╞░ß╗¥i d├╣ng</span>
+  <input type="text" id="me" placeholder="G├╡ t├¬n rß╗ôi EnterΓÇª" list="known-users">
   <datalist id="known-users"></datalist>
-  <button id="save-me" class="primary">Lưu tên</button>
-  <span id="who" style="font-size:13px;color:var(--text2)">Chưa đặt tên</span>
+  <button id="save-me" class="primary">L╞░u t├¬n</button>
+  <span id="who" style="font-size:13px;color:var(--text2)">Ch╞░a ─æß║╖t t├¬n</span>
 </div>
 
 <div class="date-nav">
-  <button id="prev-day">‹</button>
+  <button id="prev-day">ΓÇ╣</button>
   <span class="date-display" id="date-display"></span>
-  <button id="next-day">›</button>
-  <button id="today-btn">Hôm nay</button>
+  <button id="next-day">ΓÇ║</button>
+  <button id="today-btn">H├┤m nay</button>
 </div>
 
 <div class="stats-bar" id="stats-bar">
-  <div class="stat-card"><div class="num" id="stat-total">0</div><div class="label">Tổng</div></div>
-  <div class="stat-card"><div class="num green" id="stat-done">0</div><div class="label">Đã làm</div></div>
-  <div class="stat-card"><div class="num red" id="stat-pending">0</div><div class="label">Còn lại</div></div>
-  <div class="stat-card"><div class="num" id="stat-rate">0%</div><div class="label">Tỉ lệ</div></div>
+  <div class="stat-card"><div class="num" id="stat-total">0</div><div class="label">Tß╗òng</div></div>
+  <div class="stat-card"><div class="num green" id="stat-done">0</div><div class="label">─É├ú l├ám</div></div>
+  <div class="stat-card"><div class="num red" id="stat-pending">0</div><div class="label">C├▓n lß║íi</div></div>
+  <div class="stat-card"><div class="num" id="stat-rate">0%</div><div class="label">Tß╗ë lß╗ç</div></div>
   <div class="stat-card"><div class="num" id="stat-streak">0</div><div class="label">Streak</div></div>
-  <div class="stat-card"><canvas id="mini-chart" width="60" height="60" style="width:50px;height:50px;margin:0 auto;display:block"></canvas><div class="label" style="margin-top:-4px">Hôm nay</div></div>
+  <div class="stat-card"><canvas id="mini-chart" width="60" height="60" style="width:50px;height:50px;margin:0 auto;display:block"></canvas><div class="label" style="margin-top:-4px">H├┤m nay</div></div>
 </div>
 
 <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
 
 <div class="add-section">
   <div class="row">
-    <input type="text" id="task-input" placeholder="Thêm công việc…">
+    <input type="text" id="task-input" placeholder="Th├¬m c├┤ng viß╗çcΓÇª">
     <input type="time" id="task-time" style="min-width:100px;flex:0.5">
-    <select id="cat-select"><option value="work">💼 Công việc</option><option value="study">📚 Học tập</option><option value="health">🏃 Sức khỏe</option><option value="personal">🧘 Cá nhân</option><option value="finance">💰 Tài chính</option><option value="other">📌 Khác</option></select>
-    <select id="priority-select"><option value="high">🔴 Cao</option><option value="medium" selected>🟡 Trung bình</option><option value="low">🟢 Thấp</option></select>
+    <select id="cat-select"><option value="work">≡ƒÆ╝ C├┤ng viß╗çc</option><option value="study">≡ƒôÜ Hß╗ìc tß║¡p</option><option value="health">≡ƒÅâ Sß╗⌐c khß╗Åe</option><option value="personal">≡ƒºÿ C├í nh├ón</option><option value="finance">≡ƒÆ░ T├ái ch├¡nh</option><option value="other">≡ƒôî Kh├íc</option></select>
+    <select id="priority-select"><option value="high">≡ƒö┤ Cao</option><option value="medium" selected>≡ƒƒí Trung b├¼nh</option><option value="low">≡ƒƒó Thß║Ñp</option></select>
   </div>
   <div class="add-btn-row">
-    <button id="add-task" class="primary">+ Thêm</button>
-    <button id="add-bulk">📝 Thêm nhiều</button>
+    <button id="add-task" class="primary">+ Th├¬m</button>
+    <button id="add-bulk">≡ƒô¥ Th├¬m nhiß╗üu</button>
   </div>
 </div>
 
 <div class="tabs">
-  <button class="active" data-tab="today">Hôm nay</button>
-  <button data-tab="history">Lịch sử</button>
-  <button data-tab="stats">Thống kê</button>
+  <button class="active" data-tab="today">H├┤m nay</button>
+  <button data-tab="history">Lß╗ïch sß╗¡</button>
+  <button data-tab="stats">Thß╗æng k├¬</button>
 </div>
 
 <div class="tab-content active" id="tab-today">
   <div id="task-list" class="task-list"></div>
   <div style="display:flex;gap:4px;margin-top:8px">
-    <button id="clear-done" class="small danger">Xoá mục đã hoàn thành</button>
-    <button id="export-today" class="small">Xuất TXT</button>
-    <button id="export-excel" class="small">📊 Xuất Excel</button>
-    <button id="export-word" class="small">📝 Xuất Word</button>
+    <button id="clear-done" class="small danger">Xo├í mß╗Ñc ─æ├ú ho├án th├ánh</button>
+    <button id="export-today" class="small">Xuß║Ñt TXT</button>
+    <button id="export-excel" class="small">≡ƒôè Xuß║Ñt Excel</button>
+    <button id="export-word" class="small">≡ƒô¥ Xuß║Ñt Word</button>
   </div>
 </div>
 
@@ -213,20 +213,21 @@ button.danger:hover{background:var(--danger);color:#fff}
 
 <div class="tab-content" id="tab-stats">
   <div class="period-select">
-    <button data-period="week" class="active">Tuần</button>
-    <button data-period="month">Tháng</button>
-    <button data-period="year">Năm</button>
-    <button data-period="all">Tất cả</button>
+    <button data-period="week" class="active">Tuß║ºn</button>
+    <button data-period="month">Th├íng</button>
+    <button data-period="year">N─âm</button>
+    <button data-period="all">Tß║Ñt cß║ú</button>
   </div>
   <div class="stats-grid">
-    <div class="chart-wrap"><h3>📊 Tỉ lệ hoàn thành</h3><canvas id="rate-chart"></canvas></div>
-    <div class="chart-wrap"><h3>📈 Số task theo ngày</h3><canvas id="daily-chart"></canvas></div>
-    <div class="chart-wrap"><h3>🎯 Theo danh mục</h3><canvas id="cat-chart"></canvas></div>
+    <div class="chart-wrap"><h3>≡ƒôè Tß╗ë lß╗ç ho├án th├ánh</h3><canvas id="rate-chart"></canvas></div>
+    <div class="chart-wrap"><h3>≡ƒôê Sß╗æ task theo ng├áy</h3><canvas id="daily-chart"></canvas></div>
+    <div class="chart-wrap"><h3>≡ƒÄ» Theo danh mß╗Ñc</h3><canvas id="cat-chart"></canvas></div>
   </div>
 </div>
 
 </div>
 
-<script src="app.js?v=3"></script>
+
+<script src="app.js?v=4"></script>
 </body>
 </html>
