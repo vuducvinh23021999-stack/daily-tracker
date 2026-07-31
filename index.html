@@ -122,9 +122,14 @@ button.danger:hover{background:var(--danger);color:#fff}
 .task-alert .actions button{flex:1;padding:18px;font-size:20px}
 
 .history-list .day-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
-.history-list .day-group .day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.history-list .day-group .day-head .date{font-weight:600;font-size:14px}
-.history-list .day-group .day-head .rate{font-size:13px;color:var(--text2)}
+.history-list .day-group .day-head{display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;user-select:none;margin-bottom:0}
+.history-list .day-group .day-head:hover{opacity:.85}
+.history-list .day-group .day-head .chevron{display:inline-block;font-size:12px;color:var(--text2);transition:transform .15s;flex-shrink:0}
+.history-list .day-group .day-head .date{font-weight:600;font-size:14px;flex:1}
+.history-list .day-group .day-head .rate{font-size:13px;color:var(--text2);flex-shrink:0}
+.history-list .day-group .day-body{display:none;margin-top:8px}
+.history-list .day-group.open .day-body{display:block}
+.history-list .day-group.open .day-head .chevron{transform:rotate(90deg)}
 .history-list .day-group .h-task{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px}
 .history-list .day-group .h-task .h-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
 
@@ -950,22 +955,25 @@ try{(function(){
       const color=pct>=80?"var(--success)":pct>=50?"var(--warning)":"var(--danger)";
       const items=getDayTasks(d.date);
       return `<div class="day-group">
-        <div class="day-head">
+        <div class="day-head" title="Ấn để xem chi tiết">
+          <span class="chevron">▸</span>
           <span class="date">${fmtDate(d.date)}</span>
           <span class="rate" style="color:${color}">${d.done}/${d.total} (${d.rate}%)</span>
         </div>
-        ${d.total>0?'<div style="background:var(--border);border-radius:999px;height:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:999px"></div></div>':''}
-        <div style="margin-top:8px;font-size:12px;color:var(--text2)">
-          ${items.map(([_,t])=>{
-            const c=CATEGORIES.find(x=>x.id===(t.category||"other"))||CATEGORIES[CATEGORIES.length-1];
-            return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
-              <span style="width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;background:${t.done?'var(--success)':'var(--danger)'}"></span>
-              <span style="flex:1;min-width:0">${esc(t.title)}</span>
-              ${t.scheduledTime?`<span style="font-size:11px;color:var(--text2);white-space:nowrap">${t.scheduledTime}</span>`:""}
-              <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:${c.color}22;color:${c.color};white-space:nowrap">${c.label}</span>
-              <span style="font-size:12px;flex-shrink:0">${t.done?"✅":"⏳"}</span>
-            </div>`;
-          }).join("")}
+        <div class="day-body">
+          ${d.total>0?'<div style="background:var(--border);border-radius:999px;height:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:999px"></div></div>':''}
+          <div style="margin-top:8px;font-size:12px;color:var(--text2)">
+            ${items.map(([_,t])=>{
+              const c=CATEGORIES.find(x=>x.id===(t.category||"other"))||CATEGORIES[CATEGORIES.length-1];
+              return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+                <span style="width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;background:${t.done?'var(--success)':'var(--danger)'}"></span>
+                <span style="flex:1;min-width:0">${esc(t.title)}</span>
+                ${t.scheduledTime?`<span style="font-size:11px;color:var(--text2);white-space:nowrap">${t.scheduledTime}</span>`:""}
+                <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:${c.color}22;color:${c.color};white-space:nowrap">${c.label}</span>
+                <span style="font-size:12px;flex-shrink:0">${t.done?"✅":"⏳"}</span>
+              </div>`;
+            }).join("")}
+          </div>
         </div>
       </div>`;
     }).join("");
@@ -1115,6 +1123,14 @@ try{(function(){
   $("#export-excel").addEventListener("click",exportCSV);
   $("#export-word").addEventListener("click",exportWord);
   setInterval(checkOverdueTasks,5000);
+
+  // History toggle: ấn vào ngày để xổ/giấu chi tiết
+  $("#history-list").addEventListener("click",e=>{
+    const head=e.target.closest(".day-head");
+    if(!head) return;
+    const g=head.closest(".day-group");
+    if(g) g.classList.toggle("open");
+  });
 
   // Tabs
   $$(".tabs button").forEach(btn=>{
