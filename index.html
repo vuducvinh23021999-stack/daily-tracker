@@ -425,7 +425,16 @@ try{(function(){
 
   // Sound
   let audioCtx=null;
-  function initAudio(){if(!audioCtx) try{audioCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+  function initAudio(){
+    if(!audioCtx){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+    if(audioCtx&&audioCtx.state==="suspended"){try{audioCtx.resume()}catch(e){}}
+  }
+  function unlockAudio(){initAudio()}
+  document.addEventListener("pointerdown",unlockAudio);
+  document.addEventListener("touchstart",unlockAudio);
+  document.addEventListener("visibilitychange",function(){
+    if(!document.hidden&&me) checkOverdueTasks();
+  });
   function playSound(){
     try{
       if(!audioCtx) return;
@@ -441,6 +450,7 @@ try{(function(){
   let alertNodes=[];
   function playAlert(){
     try{
+      initAudio();
       if(!audioCtx) return;
       const now=audioCtx.currentTime;
       const nodes=[];
