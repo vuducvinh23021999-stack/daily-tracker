@@ -1,6 +1,6 @@
 
 try{(function(){
-  window.onerror=function(msg,src,line,col){try{
+  document.title="DT-RUNNING";window.onerror=function(msg,src,line,col){try{
     var d=document.getElementById("fb-text");
     if(d)d.textContent="Lỗi: "+msg+" (dòng "+line+")";
     var dot=document.getElementById("fb-dot");
@@ -756,4 +756,4 @@ try{(function(){
   }  $("#me").value=me;
   initUser(me);
   setDate(today());
-})();}catch(e){console.error("App error:",e)}
+})();}catch(e){console.error("App error:",e);try{var fb=document.getElementById("fb-text");if(fb)fb.textContent="Lỗi: "+e.message;var fd=document.getElementById("fb-dot");if(fd)fd.className="dot red";}catch(e2){}}
