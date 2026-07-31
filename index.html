@@ -99,7 +99,7 @@ button.danger:hover{background:var(--danger);color:#fff}
 .stats-grid{display:grid;gap:16px}
 .chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
 .chart-wrap h3{font-size:14px;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
-.chart-wrap canvas{max-height:250px}
+.chart-wrap canvas{width:100%;height:200px;max-height:250px}
 .period-select{display:flex;gap:4px;margin-bottom:12px}
 .period-select button{flex:1;padding:6px;font-size:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent}
 .period-select button.active{background:var(--primary);color:#fff;border-color:var(--primary)}
@@ -234,8 +234,8 @@ button.danger:hover{background:var(--danger);color:#fff}
   </div>
   <div class="stats-grid">
     <div class="chart-wrap"><h3>📊 Tỉ lệ hoàn thành</h3><canvas id="rate-chart"></canvas></div>
-    <div class="chart-wrap"><h3>📈 Số task theo ngày</h3><canvas id="daily-chart"></canvas></div>
-    <div class="chart-wrap"><h3>🎯 Theo danh mục</h3><canvas id="cat-chart"></canvas></div>
+    <div class="chart-wrap"><h3>📈 Số task theo ngày</h3><canvas id="daily-chart"></canvas><div style="display:flex;gap:16px;justify-content:center;margin-top:6px;font-size:12px;color:var(--text2)"><span>🟢 Đã làm</span><span>🟤 Tổng</span></div></div>
+    <div class="chart-wrap"><h3>🎯 Theo danh mục</h3><canvas id="cat-chart"></canvas><div id="cat-legend" style="margin-top:8px;text-align:center"></div></div>
   </div>
 </div>
 
@@ -948,83 +948,97 @@ try{(function(){
     host.innerHTML=data.slice().reverse().map(d=>{
       const pct=d.rate;
       const color=pct>=80?"var(--success)":pct>=50?"var(--warning)":"var(--danger)";
+      const items=getDayTasks(d.date);
       return `<div class="day-group">
         <div class="day-head">
           <span class="date">${fmtDate(d.date)}</span>
           <span class="rate" style="color:${color}">${d.done}/${d.total} (${d.rate}%)</span>
         </div>
         ${d.total>0?'<div style="background:var(--border);border-radius:999px;height:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+color+';border-radius:999px"></div></div>':''}
-        <div style="margin-top:6px;font-size:12px;color:var(--text2)">
-          ${getDayTasks(d.date).slice(0,5).map(([_,t])=>`<div class="h-task"><span class="h-dot" style="background:${t.done?'var(--success)':'var(--danger)'}"></span>${esc(t.title)}</div>`).join("")}
-          ${getDayTasks(d.date).length>5?`<div style="margin-top:4px;color:var(--text2)">…và ${getDayTasks(d.date).length-5} việc khác</div>`:""}
+        <div style="margin-top:8px;font-size:12px;color:var(--text2)">
+          ${items.map(([_,t])=>{
+            const c=CATEGORIES.find(x=>x.id===(t.category||"other"))||CATEGORIES[CATEGORIES.length-1];
+            return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+              <span style="width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;background:${t.done?'var(--success)':'var(--danger)'}"></span>
+              <span style="flex:1;min-width:0">${esc(t.title)}</span>
+              ${t.scheduledTime?`<span style="font-size:11px;color:var(--text2);white-space:nowrap">${t.scheduledTime}</span>`:""}
+              <span style="font-size:11px;padding:2px 8px;border-radius:999px;background:${c.color}22;color:${c.color};white-space:nowrap">${c.label}</span>
+              <span style="font-size:12px;flex-shrink:0">${t.done?"✅":"⏳"}</span>
+            </div>`;
+          }).join("")}
         </div>
       </div>`;
     }).join("");
   }
 
-  // Charts
+  // Charts (canvas thuần, không cần thư viện ngoài)
+  function setupCanvas(cv){
+    const dpr=window.devicePixelRatio||1;
+    const w=cv.clientWidth||cv.parentElement.clientWidth||400;
+    const h=cv.clientHeight||200;
+    cv.width=w*dpr;cv.height=h*dpr;
+    const ctx=cv.getContext("2d");ctx.scale(dpr,dpr);
+    ctx.clearRect(0,0,w,h);
+    return {ctx,w,h};
+  }
+  function drawBars(cv,labels,values,colorFn){
+    const {ctx,w,h}=setupCanvas(cv);
+    if(!labels.length) return;
+    const padL=26,padB=20,padT=8;
+    const max=Math.max(1,...values);
+    const bw=(w-padL)/labels.length;
+    ctx.strokeStyle="#e0d8c6";ctx.beginPath();ctx.moveTo(padL,padT);ctx.lineTo(padL,h-padB);ctx.lineTo(w,h-padB);ctx.stroke();
+    labels.forEach((lb,i)=>{
+      const bh=(h-padB-padT)*(values[i]/max);
+      ctx.fillStyle=colorFn?colorFn(values[i]):"#b25a3a";
+      ctx.fillRect(padL+i*bw+Math.max(2,bw*0.15),h-padB-bh,Math.max(2,bw*0.7),bh);
+      ctx.fillStyle="#6b6358";ctx.font="10px sans-serif";ctx.textAlign="center";
+      ctx.fillText(lb,padL+i*bw+bw/2,h-padB+12);
+    });
+  }
+  function drawLines(cv,labels,series){
+    const {ctx,w,h}=setupCanvas(cv);
+    if(!labels.length) return;
+    const padL=26,padB=20,padT=8;
+    const max=Math.max(1,...series.map(s=>Math.max(...s.values)));
+    ctx.strokeStyle="#e0d8c6";ctx.beginPath();ctx.moveTo(padL,padT);ctx.lineTo(padL,h-padB);ctx.lineTo(w,h-padB);ctx.stroke();
+    const x=i=>padL+(labels.length>1?i*(w-padL-6)/(labels.length-1):0)+3;
+    const y=v=>h-padB-(v/max)*(h-padB-padT);
+    series.forEach(s=>{
+      ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.beginPath();
+      labels.forEach((_,i)=>{if(i===0)ctx.moveTo(x(i),y(s.values[i]));else ctx.lineTo(x(i),y(s.values[i]))});
+      ctx.stroke();
+      ctx.fillStyle=s.color;
+      labels.forEach((_,i)=>{ctx.beginPath();ctx.arc(x(i),y(s.values[i]),2.5,0,Math.PI*2);ctx.fill()});
+    });
+    ctx.fillStyle="#6b6358";ctx.font="10px sans-serif";ctx.textAlign="center";
+    labels.forEach((lb,i)=>ctx.fillText(lb,x(i),h-padB+12));
+  }
+  function drawDonut(cv,items){
+    const {ctx,w,h}=setupCanvas(cv);
+    const cx=w/2,cy=h/2,r=Math.min(w,h)/2-14;
+    const total=items.reduce((a,b)=>a+b.value,0);
+    if(total<=0){ctx.fillStyle="#e0d8c6";ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();return}
+    let a=-Math.PI/2;
+    items.forEach(it=>{
+      const ang=it.value/total*Math.PI*2;
+      ctx.fillStyle=it.color;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a,a+ang);ctx.closePath();ctx.fill();
+      a+=ang;
+    });
+    ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(cx,cy,r*0.55,0,Math.PI*2);ctx.fill();
+  }
   function updateCharts(period){
-    if(typeof Chart==="undefined") return;
-    try{
     const data=getHistory(period);
+    if(!data||data.length===0) return;
     const labels=data.map(d=>shortDate(d.date));
-    const rates=data.map(d=>d.rate);
-    const totals=data.map(d=>d.total);
-    const dones=data.map(d=>d.done);
-
-    const chartOpts={
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false}
-      },
-      scales:{
-        y:{beginAtZero:true,max:100,grid:{color:"rgba(0,0,0,.05)"}},
-        x:{grid:{display:false}}
-      }
-    };
-
-    // Rate chart
-    if(rateChart) rateChart.destroy();
-    rateChart=new Chart($("#rate-chart"),{
-      type:"bar",
-      data:{labels,datasets:[{
-        label:"Tỉ lệ %",
-        data:rates,
-        backgroundColor:rates.map(v=>v>=80?"rgba(46,125,50,.7)":v>=50?"rgba(245,127,23,.7)":"rgba(183,28,28,.7)"),
-        borderRadius:4
-      }]},
-      options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:false}}}
-    });
-
-    // Daily chart
-    if(dailyChart) dailyChart.destroy();
-    dailyChart=new Chart($("#daily-chart"),{
-      type:"line",
-      data:{labels,datasets:[
-        {label:"Đã làm",data:dones,borderColor:"#2e7d32",backgroundColor:"rgba(46,125,50,.1)",fill:true,tension:.3,pointRadius:3},
-        {label:"Tổng",data:totals,borderColor:"#b25a3a",backgroundColor:"rgba(178,90,58,.1)",fill:true,tension:.3,pointRadius:3,borderDash:[5,5]}
-      ]},
-      options:{...chartOpts,plugins:{legend:{display:true,position:"top"}},scales:{y:{beginAtZero:true,grid:{color:"rgba(0,0,0,.05)"}},x:{grid:{display:false}}}}
-    });
-
-    // Category chart
-    const catData=getCatData(currentDate);
-    if(catChart) catChart.destroy();
-    const catLabels=[],catValues=[],catColors=[];
-    CATEGORIES.forEach(c=>{
-      if(catData[c.id]&&catData[c.id].total>0){
-        catLabels.push(c.label);
-        catValues.push(Math.round(catData[c.id].done/catData[c.id].total*100)||0);
-        catColors.push(c.color+"80");
-      }
-    });
-    catChart=new Chart($("#cat-chart"),{
-      type:"doughnut",
-      data:{labels:catLabels,datasets:[{data:catValues.map(v=>v||1),backgroundColor:catColors}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}
-    });
-  }catch(e){console.error("updateCharts error:",e)}
+    drawBars($("#rate-chart"),labels,data.map(d=>d.rate),v=>v>=80?"#2e7d32":v>=50?"#f57f17":"#b71c1c");
+    drawLines($("#daily-chart"),labels,[{color:"#2e7d32",values:data.map(d=>d.done)},{color:"#b25a3a",values:data.map(d=>d.total)}]);
+    const cd=getCatData(currentDate);
+    const items=CATEGORIES.filter(c=>cd[c.id]&&cd[c.id].total>0).map(c=>({label:c.label,color:c.color,value:cd[c.id].total,text:cd[c.id].done+"/"+cd[c.id].total}));
+    drawDonut($("#cat-chart"),items);
+    const lg=$("#cat-legend");
+    if(lg) lg.innerHTML=items.map(it=>`<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);margin:0 10px 6px 0"><span style="width:10px;height:10px;border-radius:2px;background:${it.color};display:inline-block"></span>${it.label} (${it.text})</span>`).join("");
   }
 
   // Navigate date
