@@ -1,5 +1,11 @@
 
 try{(function(){
+  window.onerror=function(msg,src,line,col){try{
+    var d=document.getElementById("fb-text");
+    if(d)d.textContent="Lỗi: "+msg+" (dòng "+line+")";
+    var dot=document.getElementById("fb-dot");
+    if(dot)dot.className="dot red";
+  }catch(e){}};
   const CATEGORIES = [
     {id:"work",label:"💼 Công việc",color:"#e53935"},
     {id:"study",label:"📚 Học tập",color:"#1e88e5"},
