@@ -233,7 +233,7 @@ button.danger:hover{background:var(--danger);color:#fff}
 
 <script>
 try{(function(){
-  document.title="DT-RUNNING";window.onerror=function(msg,src,line,col){try{
+  window.onerror=function(msg,src,line,col){try{
     var d=document.getElementById("fb-text");
     if(d)d.textContent="Lỗi: "+msg+" (dòng "+line+")";
     var dot=document.getElementById("fb-dot");
