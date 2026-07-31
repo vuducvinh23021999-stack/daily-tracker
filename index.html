@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate"><meta http-equiv="pragma" content="no-cache"><meta http-equiv="expires" content="0"><meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate"><meta http-equiv="pragma" content="no-cache"><meta http-equiv="expires" content="0">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Daily Tracker - Quản lý công việc hàng ngày</title>
+<title>Daily Tasks - Quản lý công việc hàng ngày</title>
 
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -158,7 +158,7 @@ button.danger:hover{background:var(--danger);color:#fff}
 <div class="app">
 
 <div class="header">
-  <h1><span>📋</span> Daily Tracker</h1>
+  <h1><span>📋</span> Daily Tasks</h1>
   <div class="header-right">
     <span class="online-status"><span class="dot" id="fb-dot"></span><span id="fb-text">Đang kết nối…</span></span>
   </div>
@@ -698,7 +698,7 @@ try{(function(){
   }
   function exportWord(){
     const data=getAllTasksFlat();
-    let html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Daily Tracker</title><style>
+    let html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Daily Tasks</title><style>
       body{font-family:Calibri,sans-serif;margin:40px}
       h1{color:#b25a3a;font-size:22px}
       table{border-collapse:collapse;width:100%;margin-top:16px}
@@ -707,7 +707,7 @@ try{(function(){
       .done{background:#e8f5e9}.pending{background:#fff3e0}
       .sum{margin-top:20px;font-size:14px;color:#666}
     </style></head><body>
-    <h1>📋 Daily Tracker - Báo cáo công việc</h1>
+    <h1>📋 Daily Tasks - Báo cáo công việc</h1>
     <p>Xuất ngày: ${new Date().toLocaleDateString("vi-VN")}</p>
     <hr>`;
     data.forEach(({date,items})=>{
