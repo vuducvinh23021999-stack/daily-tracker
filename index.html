@@ -202,7 +202,7 @@ button.danger:hover{background:var(--danger);color:#fff}
   <div id="task-list" class="task-list"></div>
   <div style="display:flex;gap:4px;margin-top:8px">
     <button id="clear-done" class="small danger">Xoá mục đã hoàn thành</button>
-    <button id="clear-all" class="small danger">🗑️ Xoá toàn bộ</button>
+    <button id="clear-all" class="small danger">🗑️ Xoá ngày này</button>
     <button id="export-today" class="small">Xuất TXT</button>
     <button id="export-excel" class="small">📊 Xuất Excel</button>
     <button id="export-word" class="small">📝 Xuất Word</button>
@@ -993,17 +993,15 @@ try{(function(){
     renderTasks();
   });
   $("#clear-all").addEventListener("click",()=>{
-    const count=Object.keys(tasks).length;
-    if(count===0) return setStatus("","Không có task để xoá");
-    if(!confirm("Xoá TOÀN BỘ "+count+" task (mọi ngày)?\nViệc này không thể hoàn tác!")) return;
-    if(!confirm("Chắc chắn chưa? Dữ liệu trên Firebase sẽ bị xoá hết!")) return;
-    tasks={};
-    saveToLocal();
-    fbFetch(me,"DELETE");
+    const dayTasks=getDayTasks(currentDate);
+    if(dayTasks.length===0) return setStatus("","Ngày này không có task để xoá");
+    if(!confirm("Xoá tất cả "+dayTasks.length+" task của ngày "+fmtDate(currentDate)+"?\nViệc này không thể hoàn tác!")) return;
+    if(!confirm("Chắc chắn chưa? Dữ liệu ngày này trên Firebase sẽ bị xoá hết!")) return;
+    dayTasks.forEach(([id])=>deleteTask(id));
     renderTasks();
     renderHistory("week");
     updateCharts("week");
-    setStatus("green","Đã xoá toàn bộ task");
+    setStatus("green","Đã xoá toàn bộ task ngày "+fmtDate(currentDate));
   });
   $("#export-today").addEventListener("click",()=>{
     const dt=currentDate;
