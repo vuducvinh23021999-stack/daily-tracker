@@ -112,14 +112,14 @@ button.danger:hover{background:var(--danger);color:#fff}
 .modal .modal-actions button{flex:1}
 
 .task-alert-overlay{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;z-index:2000;pointer-events:none}
-.task-alert{pointer-events:auto;background:var(--surface);border-radius:var(--radius);padding:18px 20px;width:320px;max-width:calc(100vw - 32px);box-shadow:0 8px 32px rgba(0,0,0,.2);border-left:6px solid var(--primary);animation:alertSlideUp .5s ease}
+.task-alert{pointer-events:auto;background:var(--surface);border-radius:var(--radius);padding:32px 36px;width:460px;max-width:calc(100vw - 32px);box-shadow:0 12px 48px rgba(0,0,0,.28);border-left:8px solid var(--primary);animation:alertSlideUp .5s ease}
 @keyframes alertSlideUp{0%{opacity:0;transform:translateY(30px) scale(.95)}100%{opacity:1;transform:translateY(0) scale(1)}}
-.task-alert .alarm{font-size:22px;display:inline-block;margin-right:8px;vertical-align:middle;animation:pop .8s ease infinite}
-.task-alert h3{font-size:15px;color:var(--primary);display:inline}
-.task-alert .at{font-size:12px;color:var(--text2);margin:8px 0 10px}
-.task-alert .cat{font-size:11px;padding:3px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border)}
-.task-alert .actions{display:flex;gap:8px;margin-top:14px}
-.task-alert .actions button{flex:1;padding:9px;font-size:13px}
+.task-alert .alarm{font-size:34px;display:inline-block;margin-right:10px;vertical-align:middle;animation:pop .8s ease infinite}
+.task-alert h3{font-size:22px;color:var(--primary);display:inline}
+.task-alert .at{font-size:15px;color:var(--text2);margin:12px 0 14px}
+.task-alert .cat{font-size:13px;padding:5px 14px;border-radius:999px;background:var(--surface2);border:1px solid var(--border)}
+.task-alert .actions{display:flex;gap:10px;margin-top:20px}
+.task-alert .actions button{flex:1;padding:14px;font-size:16px}
 
 .history-list .day-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
 .history-list .day-group .day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
