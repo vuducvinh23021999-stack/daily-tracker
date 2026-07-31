@@ -484,7 +484,7 @@ try{(function(){
     const sched=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m);
     const diff=now-sched;
     if(diff<=0) return false;
-    if(diff>30*60000) return false;
+    if(diff>60*60000) return false;
     return true;
   }
 
