@@ -293,6 +293,7 @@ try{(function(){
   let tasks = {};
   let currentDate = today();
   let rateChart=null, dailyChart=null, catChart=null;
+  let lastRenderSig="",lastPollSig="";
 
   // Firebase connection
   let pollTimer=null;
@@ -308,11 +309,16 @@ try{(function(){
       fbFetch(name).then(function(data){
         if(data!==null){
           setStatus("green","Đã đồng bộ");
-          tasks=Object.fromEntries(Object.entries(data||{}).filter(function(kv){return kv[0]!=="_categories"&&kv[0]!=="_routines"}));
-          saveToLocal();
-          renderTasks();
-          renderHistory("week");
-          updateCharts("week");
+          const clean=Object.fromEntries(Object.entries(data||{}).filter(function(kv){return kv[0]!=="_categories"&&kv[0]!=="_routines"}));
+          const psig=JSON.stringify(clean);
+          if(psig!==lastPollSig){
+            lastPollSig=psig;
+            tasks=clean;
+            saveToLocal();
+            renderTasks();
+            renderHistory("week");
+            updateCharts("week");
+          }
         }else{
           setStatus("red","Mất kết nối");
           if(Object.keys(tasks).length===0&&loadFromLocal()){renderTasks();renderHistory("week")}
@@ -527,6 +533,9 @@ try{(function(){
   function renderTasks(){
     const dt=currentDate;
     const dayTasks=getDayTasks(dt);
+    const sig=JSON.stringify(dayTasks.map(function(kv){const t=kv[1];return [kv[0],t.title,t.done,t.date,t.category,t.priority,t.scheduledTime,isOverdue(t)]}));
+    if(sig===lastRenderSig) return;
+    lastRenderSig=sig;
     const host=$("#task-list");
     host.innerHTML="";
 
