@@ -727,8 +727,20 @@ try{(function(){
     names.forEach(n=>{const o=document.createElement("option");o.value=n;dl.appendChild(o)});
   }).catch(()=>{});
 
-  // Auto-load
+    // Auto-load
+  function tryAutoConnect(){
+    fbFetch("","GET").then(function(data){
+      if(!data) return;
+      const names=Object.keys(data).filter(function(k){return !k.startsWith("_")});
+      if(names.length===1){
+        me=names[0];
+        localStorage.setItem("dt_me",me);
+        $("#me").value=me;
+        initUser(me);
+      }
+    }).catch(function(){});
+  }
   if(me){$("#me").value=me;initUser(me)}
-  else{$("#who").textContent="Chưa đặt tên"}
+  else{$("#who").textContent="Chưa đặt tên";tryAutoConnect()}
   setDate(today());
 })();}catch(e){console.error("App error:",e)}
