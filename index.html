@@ -4,6 +4,13 @@
 <meta charset="utf-8"><meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate"><meta http-equiv="pragma" content="no-cache"><meta http-equiv="expires" content="0"><meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate"><meta http-equiv="pragma" content="no-cache"><meta http-equiv="expires" content="0">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Daily Tasks - Quản lý công việc hàng ngày</title>
+<meta name="theme-color" content="#b25a3a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Daily Tasks">
 
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -166,6 +173,7 @@ button.danger:hover{background:var(--danger);color:#fff}
   <h1><span>📋</span> Daily Tasks</h1>
   <div class="header-right">
     <span class="online-status"><span class="dot" id="fb-dot"></span><span id="fb-text">Đang kết nối…</span></span>
+    <button id="btn-notif" title="Bật thông báo đúng giờ" style="font-size:18px;border:1px solid var(--border);border-radius:8px;background:var(--surface);padding:4px 10px;cursor:pointer">🔔</button>
   </div>
 </div>
 
@@ -248,6 +256,8 @@ button.danger:hover{background:var(--danger);color:#fff}
 
 
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script>
 try{(function(){
   window.onerror=function(msg,src,line,col){try{
@@ -266,6 +276,18 @@ try{(function(){
   ];
   const PRIORITIES = {high:{label:"🔴 Cao",color:"#e53935"},medium:{label:"🟡 TB",color:"#fb8c00"},low:{label:"🟢 Thấp",color:"#43a047"}};
   const FB_BASE="https://hagiang-planner-default-rtdb.firebaseio.com";
+
+  // ===== FIREBASE CLOUD MESSAGING CONFIG =====
+  // Điền các giá trị từ Firebase console → Project settings → General (Web App) và Cloud Messaging.
+  const FIREBASE_CONFIG={
+    apiKey:"__FIREBASE_API_KEY__",
+    authDomain:"hagiang-planner.firebaseapp.com",
+    projectId:"hagiang-planner",
+    storageBucket:"hagiang-planner.appspot.com",
+    messagingSenderId:"__FIREBASE_SENDER_ID__",
+    appId:"__FIREBASE_APP_ID__"
+  };
+  const FCM_VAPID="__FIREBASE_VAPID_KEY__"; // Firebase console → Cloud Messaging → Web Push certificates → Key pair
 
     function fbFetch(path,method,body){
     const enc=path?path.split("/").map(s=>encodeURIComponent(s)).join("/"):"";
@@ -1133,6 +1155,132 @@ try{(function(){
   $("#export-excel").addEventListener("click",exportCSV);
   $("#export-word").addEventListener("click",exportWord);
   setInterval(checkOverdueTasks,5000);
+
+  // ===== PUSH NOTIFICATIONS (FCM) =====
+  let messaging=null, fcmToken=null;
+  function toast(msg){
+    var el=document.getElementById("app-toast");
+    if(!el){
+      el=document.createElement("div");
+      el.id="app-toast";
+      el.style.cssText="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#333;color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;z-index:3000;box-shadow:0 4px 16px rgba(0,0,0,.3);opacity:0;transition:opacity .3s";
+      document.body.appendChild(el);
+    }
+    el.textContent=msg;
+    el.style.opacity="1";
+    clearTimeout(el._t);
+    el._t=setTimeout(function(){el.style.opacity="0"},2600);
+  }
+  function fcmReady(){return FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.apiKey.indexOf("__")!==0&&typeof firebase!=="undefined"}
+  function setupFCM(){
+    if(messaging||!fcmReady()) return !!messaging;
+    try{
+      firebase.initializeApp(FIREBASE_CONFIG);
+      messaging=firebase.messaging();
+      return true;
+    }catch(e){console.error("FCM init error:",e);return false}
+  }
+  function deviceId(){
+    let d=localStorage.getItem("dt_device");
+    if(!d){d=genId();localStorage.setItem("dt_device",d)}
+    return d;
+  }
+  function setNotifBtn(on){
+    const b=$("#btn-notif");
+    if(!b) return;
+    b.textContent=on?"🔔 ✅":"🔔";
+    b.style.background=on?"var(--success)":"";
+    b.style.color=on?"#fff":"";
+    b.title=on?"Thông báo đã bật":"Bật thông báo đúng giờ";
+  }
+  async function enableNotif(){
+    if(!me) return toast("Nhập tên rồi bấm Lưu tên trước!");
+    if(!setupFCM()) return toast("Chưa cấu hình Firebase Messaging (xem hướng dẫn setup)");
+    try{
+      initAudio();
+      const perm=await Notification.requestPermission();
+      if(perm!=="granted"){
+        toast("Đã chặn thông báo. iPhone: Cài đặt → Safari → Thông báo rồi thử lại.");
+        return;
+      }
+      fcmToken=await messaging.getToken({vapidKey:FCM_VAPID});
+      await fbFetch("_push/"+me+"/tokens/"+deviceId(),"PUT",{token:fcmToken,ua:navigator.userAgent,ts:Date.now()});
+      localStorage.setItem("dt_notif_"+me,"1");
+      setNotifBtn(true);
+      toast("Đã bật thông báo ✅");
+    }catch(e){console.error(e);toast("Lỗi bật thông báo: "+(e&&e.message||e))}
+  }
+  function disableNotif(){
+    if(messaging&&fcmToken){messaging.deleteToken().catch(function(){});}
+    if(me) fbFetch("_push/"+me+"/tokens/"+deviceId(),"DELETE");
+    localStorage.removeItem("dt_notif_"+me);
+    fcmToken=null;
+    setNotifBtn(false);
+    toast("Đã tắt thông báo");
+  }
+  $("#btn-notif").addEventListener("click",()=>{
+    if(localStorage.getItem("dt_notif_"+me)==="1"&&fcmToken) disableNotif();
+    else enableNotif();
+  });
+  function showPushAlert(title,body,taskId){
+    if(document.getElementById("task-alert-popup")) return;
+    const ov=document.createElement("div");
+    ov.className="task-alert-overlay";
+    ov.id="task-alert-popup";
+    ov.innerHTML='<div class="task-alert">'+
+      '<div><span class="alarm">⏰</span><h3>'+title+'</h3></div>'+
+      '<div class="at">'+body+'</div>'+
+      '<div class="actions">'+
+      (taskId?'<button id="alert-done" class="primary">✅ Đã làm</button><button id="alert-snooze">⏳ 5 phút</button>':'<button id="alert-snooze" class="primary">OK</button>')+
+      '</div></div>';
+    document.body.appendChild(ov);
+    initAudio();
+    const close=()=>{ov.remove()};
+    ov.querySelector("#alert-snooze").addEventListener("click",()=>{
+      if(taskId)snoozedUntil[taskId]=Date.now()+300000;
+      close();
+    });
+    const doneBtn=ov.querySelector("#alert-done");
+    if(doneBtn) doneBtn.addEventListener("click",()=>{
+      if(taskId&&tasks[taskId]){tasks[taskId].done=true;tasks[taskId].completedAt=Date.now();saveTask(taskId,tasks[taskId]);renderTasks();}
+      close();
+    });
+  }
+  if(fcmReady()){
+    setupFCM();
+    if(messaging){
+      messaging.onMessage(function(payload){
+        const d=payload.data||{};
+        const n=payload.notification||{};
+        const title=n.title||"⏰ Daily Tasks";
+        const body=n.body||"Đến giờ làm việc!";
+        const tid=d.taskId;
+        if(tid&&tasks[tid]){showTaskAlert(tid,tasks[tid])}
+        else showPushAlert(title,body,tid);
+      });
+    }
+    if("serviceWorker" in navigator){
+      navigator.serviceWorker.register("firebase-messaging-sw.js").catch(function(e){console.error("SW register error:",e)});
+    }
+    if(localStorage.getItem("dt_notif_"+me)==="1") setNotifBtn(true);
+  }
+  // Xử lý khi bấm vào thông báo hệ thống mở app
+  (function(){
+    const q=new URLSearchParams(location.search);
+    const tid=q.get("task");
+    if(!tid) return;
+    let retry=0;
+    function act(){
+      if(!tasks[tid]){
+        if(retry<40){retry++;setTimeout(act,1500)}
+        return;
+      }
+      if(q.get("done")==="1"){tasks[tid].done=true;tasks[tid].completedAt=Date.now();saveTask(tid,tasks[tid]);renderTasks();toast("Đã hoàn thành ✅");}
+      else if(q.get("snooze")==="1"){snoozedUntil[tid]=Date.now()+300000;toast("Nhắc lại sau 5 phút");}
+      history.replaceState({},"",location.pathname);
+    }
+    act();
+  })();
 
   // History toggle: ấn vào ngày để xổ/giấu chi tiết
   $("#history-list").addEventListener("click",e=>{

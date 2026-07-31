@@ -1,0 +1,16 @@
+{
+  "name": "Daily Tasks",
+  "short_name": "Daily Tasks",
+  "description": "Quản lý công việc hàng ngày với cảnh báo đúng giờ",
+  "start_url": ".",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0ebe3",
+  "theme_color": "#b25a3a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
