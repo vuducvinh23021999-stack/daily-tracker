@@ -50,38 +50,39 @@ try{(function(){
   const shortDate = d=>{const o=new Date(d+"T12:00:00");return o.toLocaleDateString("vi-VN",{day:"numeric",month:"numeric"})};
   const genId = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
-  let me = localStorage.getItem("dt_me")||null;
+  let me = localStorage.getItem("dt_me")||"Vũ Đức Vinh";
   let tasks = {};
   let currentDate = today();
   let rateChart=null, dailyChart=null, catChart=null;
 
   // Firebase connection
   let pollTimer=null;
+    function setStatus(cls,txt){
+    const dot=$("#fb-dot"),t=$("#fb-text");
+    if(dot)dot.className="dot "+(cls||"");
+    if(t)t.textContent=txt;
+  }
   function startPolling(name){
     if(pollTimer) clearInterval(pollTimer);
     if(!name) return;
-    async function poll(){
-      try{
-        const dot=$("#fb-dot"),txt=$("#fb-text");
-        const data=await fbFetch(name);
+    function doPoll(){
+      fbFetch(name).then(function(data){
         if(data!==null){
-          dot.className="dot green";txt.textContent="Đã đồng bộ";
-          tasks=Object.fromEntries(Object.entries(data||{}).filter(([k])=>k!=="_categories"&&k!=="_routines"));
+          setStatus("green","Đã đồng bộ");
+          tasks=Object.fromEntries(Object.entries(data||{}).filter(function(kv){return kv[0]!=="_categories"&&kv[0]!=="_routines"}));
           saveToLocal();
           renderTasks();
           renderHistory("week");
           updateCharts("week");
         }else{
-          dot.className="dot red";txt.textContent="Mất kết nối";
+          setStatus("red","Mất kết nối");
           if(Object.keys(tasks).length===0&&loadFromLocal()){renderTasks();renderHistory("week")}
         }
-      }catch(e){console.error("poll error:",e)}
+      }).catch(function(e){console.error("poll error:",e)});
     }
-    poll();
-    pollTimer=setInterval(poll,5000);
-  }
-
-  function saveTask(id,task){
+    doPoll();
+    pollTimer=setInterval(doPoll,5000);
+  }function saveTask(id,task){
     if(!me) return;
     tasks[id]=task;
     saveToLocal();
@@ -729,18 +730,24 @@ try{(function(){
 
     // Auto-load
   function tryAutoConnect(){
+    setStatus("","Đang tìm người dùng…");
     fbFetch("","GET").then(function(data){
-      if(!data) return;
+      if(!data){setStatus("red","Không kết nối được Firebase");return}
       const names=Object.keys(data).filter(function(k){return !k.startsWith("_")});
       if(names.length===1){
         me=names[0];
         localStorage.setItem("dt_me",me);
         $("#me").value=me;
         initUser(me);
+      }else if(names.length>1){
+        setStatus("","Chọn tên rồi bấm Lưu tên");
+        const dl=$("#known-users");
+        if(dl){dl.innerHTML="";names.forEach(function(n){const o=document.createElement("option");o.value=n;o.textContent=n;dl.appendChild(o)})}
+      }else{
+        setStatus("","Nhập tên rồi bấm Lưu tên");
       }
-    }).catch(function(){});
-  }
-  if(me){$("#me").value=me;initUser(me)}
-  else{$("#who").textContent="Chưa đặt tên";tryAutoConnect()}
+    }).catch(function(e){setStatus("red","Lỗi: "+e.message)});
+  }  $("#me").value=me;
+  initUser(me);
   setDate(today());
 })();}catch(e){console.error("App error:",e)}
