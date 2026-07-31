@@ -495,6 +495,8 @@ try{(function(){
     else if(!hasOverdue) stopBurstAlert();
     renderTasks();
   }
+
+  function renderStats(){
     const dt=currentDate;
     const total=getTotal(dt);
     const done=getCompleted(dt);
@@ -870,6 +872,7 @@ try{(function(){
       options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}
     });
   }catch(e){console.error("updateCharts error:",e)}
+  }
 
   // Navigate date
   function setDate(date){
@@ -984,8 +987,11 @@ try{(function(){
         setStatus("","Nhập tên rồi bấm Lưu tên");
       }
     }).catch(function(e){setStatus("red","Lỗi: "+e.message)});
-  }  $("#me").value=me;
-  initUser(me);
+  }
+
+  // Auto-load
+  if(me){$("#me").value=me;initUser(me)}
+  else{tryAutoConnect()}
   setDate(today());
 })();}catch(e){console.error("App error:",e);try{var fb=document.getElementById("fb-text");if(fb)fb.textContent="Lỗi: "+e.message;var fd=document.getElementById("fb-dot");if(fd)fd.className="dot red";}catch(e2){}}
 </script>
