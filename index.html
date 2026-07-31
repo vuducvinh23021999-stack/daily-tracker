@@ -81,6 +81,8 @@ button.danger:hover{background:var(--danger);color:#fff}
 .task-card .time-badge{font-size:11px;padding:2px 6px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--text2)}
 .task-card.overdue{border-color:var(--danger);background:#fff5f5}
 .task-card.overdue .time-badge{border-color:var(--danger);color:var(--danger);background:#ffe0e0}
+@keyframes alertPulse{0%,100%{border-color:var(--danger);box-shadow:0 0 0 0 rgba(183,28,28,.35)}50%{box-shadow:0 0 0 6px rgba(183,28,28,0)}}
+.task-card.alert-now{animation:alertPulse 1.5s ease infinite}
 .task-card .cat-badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500}
 .task-card .priority-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .task-card .task-actions{display:flex;gap:4px;flex-shrink:0}
@@ -108,6 +110,15 @@ button.danger:hover{background:var(--danger);color:#fff}
 .modal input,.modal select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font:inherit;font-size:14px;background:var(--surface2);color:var(--text);box-sizing:border-box}
 .modal .modal-actions{display:flex;gap:8px;margin-top:20px}
 .modal .modal-actions button{flex:1}
+
+.task-alert-overlay{position:fixed;top:16px;right:16px;z-index:2000;animation:fadeIn .3s ease}
+.task-alert{background:var(--surface);border-radius:var(--radius);padding:18px 20px;width:320px;max-width:calc(100vw - 32px);box-shadow:0 8px 32px rgba(0,0,0,.18);border-left:6px solid var(--primary);animation:pop .35s ease}
+.task-alert .alarm{font-size:22px;display:inline-block;margin-right:8px;vertical-align:middle;animation:pop .8s ease infinite}
+.task-alert h3{font-size:15px;color:var(--primary);display:inline}
+.task-alert .at{font-size:12px;color:var(--text2);margin:8px 0 10px}
+.task-alert .cat{font-size:11px;padding:3px 10px;border-radius:999px;background:var(--surface2);border:1px solid var(--border)}
+.task-alert .actions{display:flex;gap:8px;margin-top:14px}
+.task-alert .actions button{flex:1;padding:9px;font-size:13px}
 
 .history-list .day-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px}
 .history-list .day-group .day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -462,17 +473,66 @@ try{(function(){
   }
 
   let alertTimer=null, alertBurstTimer=null, alertRound=0;
+  let snoozedUntil={}, activePopup=null;
+
+  function dueForAlert(id,t){
+    if(t.done||!t.scheduledTime||t.date!==today()) return false;
+    if(snoozedUntil[id]&&Date.now()<snoozedUntil[id]) return false;
+    const now=new Date();
+    const [h,m]=t.scheduledTime.split(":").map(Number);
+    const sched=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m);
+    return (now-sched)>0;
+  }
+
+  function showTaskAlert(id,t){
+    if(activePopup) return;
+    activePopup=id;
+    const c=CATEGORIES.find(x=>x.id===(t.category||"other"))||CATEGORIES[CATEGORIES.length-1];
+    const ov=document.createElement("div");
+    ov.className="task-alert-overlay";
+    ov.id="task-alert-popup";
+    ov.innerHTML=`
+      <div class="task-alert">
+        <div><span class="alarm">⏰</span><h3>${esc(t.title)}</h3></div>
+        <div class="at">Đến giờ làm — ${t.scheduledTime||""} · ${fmtDate(today())}</div>
+        <div><span class="cat">${c.label}</span></div>
+        <div class="actions">
+          <button id="alert-done" class="primary">✅ Đã làm</button>
+          <button id="alert-snooze">⏳ 5 phút</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    initAudio();
+    ov.querySelector("#alert-done").addEventListener("click",()=>{
+      toggleTask(id);
+      activePopup=null;
+      ov.remove();
+      stopBurstAlert();
+    });
+    ov.querySelector("#alert-snooze").addEventListener("click",()=>{
+      snoozedUntil[id]=Date.now()+300000;
+      activePopup=null;
+      ov.remove();
+      stopBurstAlert();
+    });
+  }
+  function closeTaskAlert(){
+    if(!activePopup) return;
+    activePopup=null;
+    const ov=document.getElementById("task-alert-popup");
+    if(ov) ov.remove();
+  }
 
   function startBurstAlert(){
     stopBurstAlert();
     if(!me) return;
-    const hasOverdue=Object.entries(tasks).some(([id,t])=>isOverdue(t));
+    const hasOverdue=Object.entries(tasks).some(([id,t])=>dueForAlert(id,t));
     if(!hasOverdue) return;
     alertRound++;
     if(alertRound>3) return;
     let count=0;
     function playRound(){
-      if(count>=30||!Object.values(tasks).some(t=>!t.done&&isOverdue(t))){
+      if(count>=30||!Object.entries(tasks).some(([id,t])=>dueForAlert(id,t))){
         scheduleNextBurst();
         return;
       }
@@ -492,15 +552,23 @@ try{(function(){
 
   function scheduleNextBurst(){
     if(alertBurstTimer){clearTimeout(alertBurstTimer);alertBurstTimer=null}
-    if(!Object.values(tasks).some(t=>!t.done&&isOverdue(t))){alertRound=0;return}
+    if(!Object.entries(tasks).some(([id,t])=>dueForAlert(id,t))){alertRound=0;return}
     alertTimer=setTimeout(startBurstAlert,300000);
   }
 
   function checkOverdueTasks(){
     if(!me) return;
-    const hasOverdue=Object.entries(tasks).some(([id,t])=>isOverdue(t));
-    if(hasOverdue&&!alertTimer&&!alertBurstTimer) startBurstAlert();
-    else if(!hasOverdue) stopBurstAlert();
+    const due=Object.entries(tasks).filter(([id,t])=>dueForAlert(id,t));
+    if(due.length>0){
+      if(!activePopup){
+        due.sort((a,b)=>(a[1].scheduledTime||"9999").localeCompare(b[1].scheduledTime||"9999"));
+        showTaskAlert(due[0][0],due[0][1]);
+      }
+      if(!alertTimer&&!alertBurstTimer) startBurstAlert();
+    }else{
+      closeTaskAlert();
+      stopBurstAlert();
+    }
     renderTasks();
   }
 
@@ -565,7 +633,8 @@ try{(function(){
       grouped[c.id].forEach(([id,t])=>{
         const card=document.createElement("div");
         const ov=isOverdue(t);
-        card.className="task-card"+(ov?" overdue":"");
+        const an=dueForAlert(id,t);
+        card.className="task-card"+(ov?" overdue":"")+(an?" alert-now":"");
         card.innerHTML=`
           <div class="check-wrap ${t.done?"done":""}" data-id="${id}"></div>
           <div class="task-body">
@@ -668,6 +737,7 @@ try{(function(){
     t.completedAt=t.done?Date.now():null;
     saveTask(id,t);
     if(t.done) playSound();
+    if(!Object.entries(tasks).some(([i,tt])=>dueForAlert(i,tt))) stopBurstAlert();
     renderTasks();
   }
 
