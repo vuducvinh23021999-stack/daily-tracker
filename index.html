@@ -482,7 +482,10 @@ try{(function(){
     const now=new Date();
     const [h,m]=t.scheduledTime.split(":").map(Number);
     const sched=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m);
-    return (now-sched)>0;
+    const diff=now-sched;
+    if(diff<=0) return false;
+    if(diff>30*60000) return false;
+    return true;
   }
 
   function showTaskAlert(id,t){
